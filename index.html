@@ -1,0 +1,818 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Word Trail</title>
+<meta name="description" content="A daily vocabulary trail for ISEE prep: flashcards, tricky quizzes, and parent progress tracking.">
+<meta name="theme-color" content="#1D2A4B">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Lora:ital,wght@0,400;0,600;1,400&display=swap');
+:root{
+  --mist:#E8F1F0; --paper:#FFFFFF; --ink:#1D2A4B; --ink2:#56627F; --line:#C6D5D8;
+  --leaf:#2E8F6B; --leafd:#1E6B50; --sun:#F6B93B; --sky:#4A7AE4; --berry:#C63A5A; --seed:#DCE7E4;
+  --accent:var(--leaf); --r:18px;
+  --ui:'Fredoka','Nunito',ui-rounded,'SF Pro Rounded',system-ui,sans-serif;
+  --read:'Lora',Georgia,'Times New Roman',serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--mist);color:var(--ink);font-family:var(--read);font-size:17px;line-height:1.55;-webkit-text-size-adjust:100%}
+body{min-height:100vh;padding-bottom:env(safe-area-inset-bottom)}
+h1,h2,h3,p{margin:0}
+h1,h2,h3,.ui{font-family:var(--ui);font-weight:500;letter-spacing:.005em}
+h1{font-size:2rem;line-height:1.15} h2{font-size:1.35rem;line-height:1.25} h3{font-size:1.1rem}
+.muted{color:var(--ink2)} .small{font-size:.9rem} .center{text-align:center}
+.shell{max-width:560px;margin:0 auto;padding:14px 16px 56px}
+.shell.wide{max-width:1000px}
+.stack>*+*{margin-top:16px} .stack-s>*+*{margin-top:8px}
+.row{display:flex;align-items:center;gap:12px} .row.wrap{flex-wrap:wrap} .grow{flex:1} .between{justify-content:space-between}
+:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
+button{font:inherit;color:inherit}
+
+/* top bar */
+.bar{display:flex;align-items:center;gap:10px;padding:6px 0 14px}
+.bar .name{font-family:var(--ui);font-weight:500;font-size:1.15rem}
+.av{width:42px;height:42px;border-radius:50%;background:var(--c,var(--ink));color:#fff;display:grid;place-items:center;font-family:var(--ui);font-weight:600;font-size:1.15rem;border:2px solid var(--ink);flex:none}
+.av.big{width:84px;height:84px;font-size:2.3rem;border-width:3px}
+
+/* cards + buttons */
+.card{background:var(--paper);border:2px solid var(--ink);border-radius:var(--r);box-shadow:4px 4px 0 var(--ink);padding:18px}
+.card.flat{box-shadow:none}
+.btn{font-family:var(--ui);font-weight:500;font-size:1.05rem;padding:.75rem 1.15rem;border-radius:14px;border:2px solid var(--ink);background:var(--paper);color:var(--ink);cursor:pointer;box-shadow:0 3px 0 var(--ink);transition:transform .08s,box-shadow .08s;text-align:center}
+.btn:active:not([disabled]){transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.sun{background:var(--sun)}
+.btn.berry{background:var(--berry);color:#fff}
+.btn.block{display:block;width:100%}
+.btn.sm{font-size:.92rem;padding:.45rem .8rem;border-radius:11px;box-shadow:0 2px 0 var(--ink)}
+.btn[disabled]{opacity:.45;box-shadow:none;cursor:not-allowed}
+.link{background:none;border:0;padding:0;color:var(--ink);text-decoration:underline;text-underline-offset:3px;cursor:pointer;font-family:var(--ui)}
+.link.danger{color:var(--berry)}
+
+/* login */
+.hero{padding:26px 0 10px}
+.hero h1{font-size:2.6rem}
+.tiles{display:grid;gap:14px;margin-top:20px}
+.tile{display:flex;align-items:center;gap:16px;text-align:left;width:100%;cursor:pointer}
+.tile .t{font-family:var(--ui);font-weight:500;font-size:1.35rem}
+.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:300px;margin:18px auto 0}
+.key{font-family:var(--ui);font-size:1.5rem;padding:.7rem 0;border-radius:14px;border:2px solid var(--ink);background:#fff;box-shadow:0 3px 0 var(--ink);cursor:pointer}
+.key:active{transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
+.pins{display:flex;gap:14px;justify-content:center;margin:14px 0 4px}
+.pin{width:20px;height:20px;border-radius:50%;border:2px solid var(--ink);background:#fff}
+.pin.on{background:var(--ink)}
+.shake{animation:shake .35s}
+@keyframes shake{20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+.err{color:var(--berry);font-family:var(--ui);min-height:1.5em}
+label.f{display:block;font-family:var(--ui);margin:12px 0 4px}
+input.t,select.t{font:inherit;font-family:var(--ui);width:100%;padding:.6rem .8rem;border:2px solid var(--ink);border-radius:12px;background:#fff;color:var(--ink)}
+textarea.t{font:.8rem/1.3 ui-monospace,Menlo,monospace;width:100%;min-height:120px;padding:.6rem;border:2px solid var(--ink);border-radius:12px;background:#fff;color:var(--ink)}
+
+/* trail on learner home */
+.trail{position:relative;padding-left:62px}
+.trail:before{content:"";position:absolute;left:19px;top:30px;bottom:48px;border-left:3px dotted var(--ink2)}
+.step{position:relative}
+.step+.step{margin-top:22px}
+.stone{position:absolute;left:-62px;top:2px;width:40px;height:40px;border-radius:50%;border:2px solid var(--ink);background:#fff;display:grid;place-items:center;font-family:var(--ui);font-weight:600}
+.stone.done{background:var(--accent);color:#fff}
+.stone.lock{background:var(--seed);color:var(--ink2)}
+.step h2{margin-bottom:2px}
+
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:baseline;gap:6px;padding:.3rem .75rem;border:2px solid var(--ink);border-radius:999px;background:#fff;font-family:var(--ui);font-size:.95rem}
+.chip b{font-weight:600}
+.chip.pfx{background:#FFE9B0}.chip.root{background:#CFEBDD}.chip.sfx{background:#D6E2FB}
+
+.dots{display:flex;flex-wrap:wrap;gap:5px}
+.dot{width:15px;height:15px;border-radius:50%;border:2px solid var(--ink);background:var(--seed);padding:0;cursor:pointer}
+.dot.s1{background:#BFE3D1}.dot.s2{background:#6FC29D}.dot.s3{background:var(--sun)}.dot.s4{background:#E67FA0}.dot.t{box-shadow:0 0 0 2px var(--berry)}
+.legend{display:flex;flex-wrap:wrap;gap:10px;font-family:var(--ui);font-size:.85rem;color:var(--ink2)}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:50%;border:2px solid var(--ink);vertical-align:-1px;margin-right:4px}
+
+/* flashcard */
+.flash{min-height:340px;display:flex;flex-direction:column;justify-content:center;cursor:pointer;position:relative;padding:24px 20px}
+.flash .word{font-family:var(--ui);font-weight:600;font-size:2.7rem;line-height:1.1;text-align:center;word-break:break-word}
+.flash.back .word{font-size:1.8rem;text-align:left}
+.flash .hint{text-align:center;margin-top:16px;color:var(--ink2);font-family:var(--ui)}
+.flash .meaning{font-size:1.2rem;margin-top:8px}
+.flash .sent{font-style:italic;margin-top:12px;border-left:4px solid var(--sun);padding-left:12px}
+mark{background:#FFE08A;color:inherit;border-radius:4px;padding:0 3px;font-style:normal;font-weight:600}
+.flash .parts{margin-top:14px;border-top:2px dashed var(--line);padding-top:12px}
+.flash .parts h3{font-size:.95rem;color:var(--ink2);margin-bottom:6px}
+.flipin{animation:flipin .26s ease}
+@keyframes flipin{from{transform:rotateY(80deg);opacity:.2}to{transform:none;opacity:1}}
+.speak{position:absolute;right:12px;top:12px;width:42px;height:42px;border-radius:50%;border:2px solid var(--ink);background:#fff;cursor:pointer;font-size:1.1rem;display:grid;place-items:center}
+.prog{height:12px;border:2px solid var(--ink);border-radius:999px;background:#fff;overflow:hidden}
+.prog>i{display:block;height:100%;background:var(--accent)}
+
+/* quiz */
+.q .prompt{font-family:var(--ui);font-size:1.5rem;line-height:1.3}
+.q .prompt.sent{font-family:var(--read);font-size:1.2rem;line-height:1.5}
+.q .prompt.syn{font-size:2.1rem;font-weight:600;letter-spacing:.06em;line-height:1.2;margin:4px 0 4px}
+.q .kind{font-family:var(--ui);color:var(--ink2);margin-bottom:6px}
+.opt{display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;padding:12px 14px;border:2px solid var(--ink);border-radius:14px;background:#fff;cursor:pointer;margin-top:10px;font-family:var(--read);font-size:1.02rem;line-height:1.4}
+.opt .ltr{flex:none;width:30px;height:30px;border-radius:50%;border:2px solid var(--ink);display:grid;place-items:center;font-family:var(--ui);font-weight:600;background:#fff}
+.opt:hover:not([disabled]){background:#F4FAF8}
+.opt.right{background:#D4F0E2;border-color:var(--leafd)} .opt.right .ltr{background:var(--leafd);color:#fff;border-color:var(--leafd)}
+.opt.wrong{background:#FBDCE4;border-color:var(--berry)} .opt.wrong .ltr{background:var(--berry);color:#fff;border-color:var(--berry)}
+.opt.dim{opacity:.55}
+.opt[disabled]{cursor:default}
+.fb{margin-top:16px;border:2px solid var(--ink);border-radius:14px;padding:14px;background:#FFFBEA}
+.fb.good{background:#E6F6EE}.fb.bad{background:#FDF0F3}
+.fb h3{margin-bottom:4px}
+
+.score{font-family:var(--ui);font-weight:600;font-size:3.4rem;line-height:1}
+.miss{padding:10px 0;border-top:2px dashed var(--line)}
+.miss:first-child{border-top:0}
+
+/* parent */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media (max-width:760px){.grid2{grid-template-columns:1fr}}
+table.tbl{width:100%;border-collapse:collapse;font-size:.95rem}
+table.tbl th,table.tbl td{padding:6px 8px;border-bottom:2px solid var(--line);text-align:left;vertical-align:top}
+table.tbl th{font-family:var(--ui);font-weight:500;color:var(--ink2)}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:2px dashed var(--line)}
+.kv:last-child{border-bottom:0}
+.kv b{font-family:var(--ui);font-weight:600}
+.pill{display:inline-block;padding:.1rem .6rem;border-radius:999px;border:2px solid var(--ink);font-family:var(--ui);font-size:.85rem;background:#fff}
+.pill.ok{background:#D4F0E2}.pill.no{background:#FDE7C0}
+.svgwrap svg{width:100%;height:auto;display:block}
+.toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:.6rem 1rem;border-radius:12px;font-family:var(--ui);z-index:9;max-width:90vw}
+hr.d{border:0;border-top:2px dashed var(--line);margin:14px 0}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="words.js"></script>
+<script>
+(function(){
+'use strict';
+/* ================= basics ================= */
+const KEY='wordtrail.v1';
+const LEARNERS=[
+  {id:'samaira',name:'Samaira',color:'#2E8F6B',def:{perDay:25,quizLen:25,order:'hard'}},
+  {id:'arjun',name:'Arjun',color:'#4A7AE4',def:{perDay:5,quizLen:10,order:'easy'}}
+];
+const LV={U:'Upper',M:'Middle',F:'Foundation'};
+const INTERVALS=[1,2,4,8,16];
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const escRe=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+const fmt=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const todayStr=()=>fmt(new Date());
+const parseD=s=>{const a=s.split('-').map(Number);return new Date(a[0],a[1]-1,a[2])};
+const addDays=(s,n)=>{const d=parseD(s);d.setDate(d.getDate()+n);return fmt(d)};
+const diffDays=(a,b)=>Math.round((parseD(b)-parseD(a))/86400000);
+const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function hstr(s){let h=1779033703^s.length;for(let i=0;i<s.length;i++){h=Math.imul(h^s.charCodeAt(i),3432918353);h=h<<13|h>>>19}return h>>>0}
+function sshuffle(arr,seed){const r=mulberry32(seed),a=arr.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function shuffle(arr){const a=arr.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function toast(msg){const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2600)}
+function speak(text){try{if(!window.speechSynthesis)return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.rate=.85;speechSynthesis.speak(u)}catch(e){}}
+
+/* ================= words ================= */
+const N=WORDS.length;
+const KEYS=WORDS.map(w=>w.w.toLowerCase());
+const WI=new Map(KEYS.map((k,i)=>[k,i]));
+const STOP=new Set('a an the of or and to in on for with by from as at is are be being been it its this that which who whom whose one more most than into over under out up very not no also such someone something especially typically usually often'.split(' '));
+function toks(s){return new Set((s.toLowerCase().match(/[a-z]+/g)||[]).filter(t=>t.length>2&&!STOP.has(t)).map(t=>t.length>4?t.replace(/(ing|edly|ed|es|s|ly)$/,''):t))}
+function tris(w){const s='^'+w.toLowerCase().replace(/[^a-z]/g,'')+'$',o=new Set();for(let i=0;i<s.length-2;i++)o.add(s.substr(i,3));return o}
+function jac(a,b){if(!a.size||!b.size)return 0;let n=0;const[s,l]=a.size<b.size?[a,b]:[b,a];s.forEach(x=>{if(l.has(x))n++});return n/(a.size+b.size-n)}
+const VERBS=new Set('abandon abolish accept achieve add admire advance announce argue arrange arrest ask assign attack attempt avoid bear begin bend bring build burn call carry cause change chase choose claim clean climb collect combine come complain complete confuse connect consider continue control cover create criticize cut damage decay declare decorate defeat delay demand describe destroy develop discover divide do draw drive eat end enter escape examine exceed exclude expand explain express extend fall fight fill find follow force form gain gather give go grow guide handle harm hate help hide hold hurt identify ignore imagine improve include increase inform inspect join judge jump keep kill know lack leave lessen lift limit live look lose make match mean measure meet mention mix move name need notice obtain offer open order pass pay perform pick place plan play point praise prepare present press prevent produce promise protect prove provide pull push put raise reach read recall receive reduce refuse remain remove repeat reply report request rest return reveal rise rob rule run save say search see seek select send separate serve set shake share shine shout show shrink sit sleep smell speak spend spread stand start stay steal stop strike study succeed suggest supply support surprise survive take talk teach tell test think throw touch train travel treat trick try turn understand unite use visit wait walk wander want warn wash waste watch wear weaken win wish withdraw work worry write yield'.split(' '));
+const ADJ_START=/^(having|showing|relating|characterized|full of|not|very|extremely|causing|able|capable|likely|inclined|tending|feeling|marked|lacking|without|being|of |involving|expressing|exhibiting|resembling|deserving|eager|willing|ready|easily|too|more|less|so )/;
+function guessPos(w,m){
+  const k=w.toLowerCase(), d=m.toLowerCase();
+  if(/ly$/.test(k)&&k.length>4)return'adv';
+  if(/^to /.test(d))return'v';
+  if(/(ous|ful|ive|able|ible|less|ish|ical)$/.test(k))return'adj';
+  if(/(tion|sion|ment|ness|ity|ism|ist|ance|ence|hood|ship|ology|ery)$/.test(k))return'n';
+  if(/(ize|ise|ify)$/.test(k))return'v';
+  if(/^(a|an|the) /.test(d))return'n';
+  if(ADJ_START.test(d))return'adj';
+  const f=d.split(/[ ;,]/)[0];
+  if(VERBS.has(f))return'v';
+  return'?';
+}
+const TOK=new Array(N),TRI=new Array(N),POS=new Array(N),QD=new Array(N);
+function qdef(m){
+  let s=m.replace(/\s*\([^)]*\)/g,'').split(';')[0].trim();
+  if(s.length>85){
+    const parts=s.split(/,\s*/);let o=parts[0];
+    for(let i=1;i<parts.length;i++){if((o+', '+parts[i]).length<=85)o+=', '+parts[i];else break}
+    s=o;
+    if(s.length>95){const c=s.slice(0,95);const i=c.lastIndexOf(' ');s=c.slice(0,i>40?i:95).replace(/[,\s]+$/,'')+'…'}
+  }
+  return cap(s);
+}
+const TRIY=new Array(N);
+for(let i=0;i<N;i++){const w=WORDS[i];TOK[i]=toks(w.m);TRI[i]=tris(w.w);POS[i]=guessPos(w.w,w.m);QD[i]=qdef(w.m);TRIY[i]=w.y?tris(w.y):null}
+function spell(a,b){
+  const x=KEYS[a],y=KEYS[b];let cp=0;while(cp<4&&x[cp]&&x[cp]===y[cp])cp++;
+  let cs=0;while(cs<4&&x[x.length-1-cs]&&x[x.length-1-cs]===y[y.length-1-cs])cs++;
+  return .35*cp+.3*cs+2.5*jac(TRI[a],TRI[b])-.08*Math.abs(x.length-y.length);
+}
+
+/* ================= storage ================= */
+let data=load();
+function load(){try{const r=localStorage.getItem(KEY);if(r){const d=JSON.parse(r);if(d&&d.v===1)return d}}catch(e){}return null}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){toast('Could not save. Storage may be full or blocked.')}}
+function newProg(){return{words:{},days:{},tests:[],updated:0}}
+function cyrb(str){let h1=0xdeadbeef,h2=0x41c6ce57;for(let i=0;i<str.length;i++){const c=str.charCodeAt(i);h1=Math.imul(h1^c,2654435761);h2=Math.imul(h2^c,1597334677)}h1=Math.imul(h1^h1>>>16,2246822507)^Math.imul(h2^h2>>>13,3266489909);h2=Math.imul(h2^h2>>>16,2246822507)^Math.imul(h1^h1>>>13,3266489909);return(4294967296*(2097151&h2)+(h1>>>0)).toString(16)}
+async function hashPin(pin,salt){
+  const s=salt+':'+pin;
+  if(window.crypto&&crypto.subtle){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join('')}
+  return'f'+cyrb(s);
+}
+async function checkPin(who,pin){
+  const st=data.pins[who];if(!st)return false;
+  if(st[0]==='f')return st==='f'+cyrb(data.salt+':'+pin);
+  return st===await hashPin(pin,data.salt);
+}
+const learner=id=>LEARNERS.find(l=>l.id===id);
+const P=id=>data.prog[id];
+const SET=id=>data.settings[id];
+function touch(id){P(id).updated=Date.now()}
+
+/* ================= plan + days ================= */
+const QCACHE={};
+function queueFor(id){
+  const s=SET(id),ck=id+s.order+(s.mature?1:0);
+  if(QCACHE[ck])return QCACHE[ck];
+  const tiers={U:[],M:[],F:[]};
+  for(let i=0;i<N;i++){if(WORDS[i].f&&!s.mature)continue;tiers[WORDS[i].l].push(KEYS[i])}
+  let q;
+  if(s.order==='mixed')q=sshuffle([].concat(tiers.U,tiers.M,tiers.F),hstr(id+'mix'));
+  else{const ord=s.order==='hard'?['U','M','F']:['F','M','U'];q=[].concat(...ord.map(t=>sshuffle(tiers[t],hstr(id+t))))}
+  return QCACHE[ck]=q;
+}
+function assignedSet(id){const s=new Set();Object.values(P(id).days).forEach(d=>d.ids.forEach(k=>s.add(k)));return s}
+function ensureToday(id){
+  const p=P(id),t=todayStr();
+  if(p.days[t])return p.days[t];
+  const n=SET(id).perDay,ids=[];
+  // carry over words that were assigned on earlier days but never reviewed
+  Object.keys(p.days).sort().forEach(dk=>p.days[dk].ids.forEach(k=>{if(!p.words[k]&&ids.length<n&&!ids.includes(k))ids.push(k)}));
+  const used=assignedSet(id);
+  for(const k of queueFor(id)){if(ids.length>=n)break;if(!used.has(k)&&!p.words[k])ids.push(k)}
+  p.days[t]={ids,reviewDone:false,tests:[]};
+  touch(id);save();
+  return p.days[t];
+}
+function dayComplete(d){return d&&d.reviewDone&&d.tests.length>0}
+function streak(id){
+  const p=P(id);let d=todayStr();
+  if(!dayComplete(p.days[d]))d=addDays(d,-1);
+  let n=0;while(dayComplete(p.days[d])){n++;d=addDays(d,-1)}
+  return n;
+}
+function playable(id){return SET(id).mature?N:N-WORDS.filter(w=>w.f).length}
+const stage=wp=>wp?Math.min(4,wp.box):0;
+
+/* ================= stats ================= */
+function stats(id){
+  const p=P(id),keys=Object.keys(p.words);
+  let ok=0,bad=0,mastered=0,tricky=0;const byLv={U:[0,0],M:[0,0],F:[0,0]};
+  keys.forEach(k=>{const w=p.words[k];ok+=w.ok;bad+=w.bad;if(w.box>=3)mastered++;if(w.tricky)tricky++;const i=WI.get(k);if(i!=null){const l=WORDS[i].l;byLv[l][0]+=w.ok;byLv[l][1]+=w.ok+w.bad}});
+  const total=ok+bad;
+  const byType={syn:[0,0],sc1:[0,0],sc2:[0,0]};
+  Object.values(p.days).forEach(d=>d.tests.forEach(t=>(t.items||[]).forEach(it=>{if(it.ty&&byType[it.ty]){byType[it.ty][1]++;if(it.ok)byType[it.ty][0]++}})));
+  const last=p.tests.slice(-1)[0];
+  const lastDay=Object.keys(p.days).filter(d=>p.days[d].reviewDone||p.days[d].tests.length).sort().pop();
+  return{learned:keys.length,mastered,tricky,acc:total?Math.round(100*ok/total):null,tests:p.tests.length,streak:streak(id),last,lastDay,byLv,byType};
+}
+
+/* ================= quiz engine ================= */
+/* Three ISEE verbal formats:
+   syn = synonym (one word, four single-word choices)
+   sc1 = sentence completion with one blank
+   sc2 = paired words: a sentence with two blanks and four word pairs */
+function spellStr(x,y,tx,ty){
+  let cp=0;while(cp<4&&x[cp]&&x[cp]===y[cp])cp++;
+  let cs=0;while(cs<4&&x[x.length-1-cs]&&x[x.length-1-cs]===y[y.length-1-cs])cs++;
+  return .35*cp+.3*cs+2.5*jac(tx,ty)-.08*Math.abs(x.length-y.length);
+}
+function stemW(t){return t.length>4?t.replace(/(ing|edly|ed|es|s|ly)$/,''):t}
+function weightedPick(cands,want){
+  cands.sort((a,b)=>b[0]-a[0]);
+  const pool=cands.slice(0,14),out=[];
+  while(out.length<want&&pool.length){const i=Math.floor(Math.pow(Math.random(),1.6)*pool.length);out.push(pool.splice(i,1)[0][1])}
+  return out;
+}
+/* look-alike, same-part-of-speech words that do not mean the same thing */
+function pickDistractors(ti,id,want){
+  const prog=P(id).words,mature=!!SET(id).mature;
+  const tw=prog[KEYS[ti]],conf=(tw&&tw.conf)||{};
+  const cands=[];
+  for(let j=0;j<N;j++){
+    if(j===ti)continue;
+    const w=WORDS[j];if(w.f&&!mature)continue;
+    const se=jac(TOK[ti],TOK[j]);
+    if(se>.18)continue;
+    if(w.y&&WORDS[ti].y&&w.y===WORDS[ti].y)continue;
+    const sp=spell(ti,j);
+    const posb=(POS[ti]!=='?'&&POS[ti]===POS[j])?1:(POS[ti]==='?'||POS[j]==='?')?.4:0;
+    const learned=prog[KEYS[j]]?1:0,cf=conf[KEYS[j]]||0;
+    const sc=1.7*sp+1.0*se+1.0*posb+.7*learned+3*Math.min(cf,2)-Math.abs(KEYS[ti].length-KEYS[j].length)*.08;
+    cands.push([sc+Math.random()*.35,j]);
+  }
+  return weightedPick(cands,want);
+}
+/* wrong answers for a synonym question are real synonyms of OTHER words, so every option looks equally simple */
+function pickSynDistractors(ti,id,want){
+  const prog=P(id).words,mature=!!SET(id).mature;
+  const tw=prog[KEYS[ti]],conf=(tw&&tw.conf)||{};
+  const y=WORDS[ti].y,ty=TRIY[ti],used=new Set([y,KEYS[ti]]),cands=[];
+  for(let j=0;j<N;j++){
+    if(j===ti)continue;
+    const w=WORDS[j];if(!w.y||(w.f&&!mature))continue;
+    const yj=w.y;
+    if(used.has(yj))continue;
+    if(TOK[ti].has(stemW(yj)))continue;
+    const se=jac(TOK[ti],TOK[j]);
+    if(se>.18)continue;
+    const sp=spellStr(y,yj,ty,TRIY[j]);
+    const posb=(POS[ti]!=='?'&&POS[ti]===POS[j])?1:(POS[ti]==='?'||POS[j]==='?')?.4:0;
+    const learned=prog[KEYS[j]]?1:0,cf=conf[KEYS[j]]||0;
+    const sc=1.0*sp+1.5*posb+1.3*learned+3*Math.min(cf,2)+se-Math.abs(y.length-yj.length)*.12;
+    cands.push([sc+Math.random()*.4,j]);
+  }
+  const picks=weightedPick(cands,12),out=[];
+  for(const j of picks){if(out.length>=want)break;if(!used.has(WORDS[j].y)){used.add(WORDS[j].y);out.push(j)}}
+  return out;
+}
+function blanked(ti){const w=WORDS[ti];return w.s.replace(new RegExp('\\b'+escRe(w.w)+'\\b','i'),'_____')}
+const lc=j=>WORDS[j].w.toLowerCase();
+function makeSyn(ti,id){
+  const w=WORDS[ti];if(!w.y)return null;
+  const ds=pickSynDistractors(ti,id,3);if(ds.length<3)return null;
+  const opts=shuffle([{t:w.y,ks:[KEYS[ti]],ok:true}].concat(ds.map(j=>({t:WORDS[j].y,ks:[KEYS[j]],ok:false}))));
+  return{k:KEYS[ti],type:'syn',prompt:w.w.toUpperCase(),ptype:'Choose the word closest in meaning',opts,ans:opts.findIndex(o=>o.ok),cks:[KEYS[ti]]};
+}
+function makeSc1(ti,id){
+  const ds=pickDistractors(ti,id,3);if(ds.length<3)return null;
+  const opts=shuffle([ti].concat(ds)).map(j=>({t:lc(j),ks:[KEYS[j]],ok:j===ti}));
+  return{k:KEYS[ti],type:'sc1',prompt:blanked(ti),ptype:'Choose the word that best completes the sentence',opts,ans:opts.findIndex(o=>o.ok),cks:[KEYS[ti]]};
+}
+function makeSc2(ti,id){
+  const w=WORDS[ti];if(!w.q)return null;
+  const a=WI.get(w.q[1]),b=WI.get(w.q[2]);if(a==null||b==null)return null;
+  const dA=pickDistractors(a,id,4),dB=pickDistractors(b,id,4);
+  if(dA.length<2||dB.length<2)return null;
+  const combos=[[a,b],[a,dB[0]],[dA[0],b],[dA[1],dB[1]]];
+  const seen=new Set(),opts=[];
+  combos.forEach(c=>{const key=c.join('-');if(seen.has(key))return;seen.add(key);opts.push({t:lc(c[0])+' … '+lc(c[1]),ks:[KEYS[c[0]],KEYS[c[1]]],ok:c[0]===a&&c[1]===b})});
+  if(opts.length<4)return null;
+  const sh=shuffle(opts);
+  return{k:KEYS[ti],type:'sc2',prompt:w.q[0].replace(/___/g,'_____'),ptype:'Choose the pair of words that best completes the sentence',opts:sh,ans:sh.findIndex(o=>o.ok),cks:[KEYS[a],KEYS[b]]};
+}
+function makeQ(ti,type,id){
+  const order={syn:[makeSyn,makeSc1,makeSc2],sc1:[makeSc1,makeSyn],sc2:[makeSc2,makeSc1,makeSyn]}[type];
+  for(const f of order){const q=f(ti,id);if(q)return q}
+  return null;
+}
+function pickQuizWords(id,len){
+  const p=P(id),t=todayStr(),day=p.days[t],today=new Set(day?day.ids:[]);
+  const rows=Object.keys(p.words).map(k=>{
+    const w=p.words[k];let s=0;
+    if(today.has(k))s+=3;
+    if(w.tricky)s+=4;
+    const over=w.due?Math.max(0,diffDays(w.due,t)):0;
+    s+=Math.min(over,10)*.6+(4-Math.min(4,w.box))*.8+Math.random()*1.5;
+    return[s,k];
+  });
+  rows.sort((a,b)=>b[0]-a[0]);
+  return rows.slice(0,Math.min(len,rows.length)).map(r=>r[1]);
+}
+/* roughly the real ISEE mix: half synonyms, a quarter each of one-blank and two-blank sentences */
+function assignTypes(keys){
+  const L=keys.length,quota={syn:Math.ceil(L*.5),sc1:Math.round(L*.25),sc2:Math.round(L*.25)};
+  const out={};
+  shuffle(keys).forEach(k=>{
+    const w=WORDS[WI.get(k)],avail=[];
+    if(w.y)avail.push('syn');avail.push('sc1');if(w.q)avail.push('sc2');
+    // paired questions are scarce, so give them first pick
+    let pool=avail.filter(t=>quota[t]>0);if(!pool.length)pool=avail;
+    let t=pool.includes('sc2')&&Math.random()<.7?'sc2':pool[Math.floor(Math.random()*pool.length)];
+    quota[t]--;out[k]=t;
+  });
+  return out;
+}
+function buildQuiz(id){
+  const keys=pickQuizWords(id,SET(id).quizLen),types=assignTypes(keys);
+  return shuffle(keys).map(k=>makeQ(WI.get(k),types[k],id)).filter(Boolean);
+}
+function recordAnswer(id,q,opt){
+  const p=P(id),t=todayStr();
+  const w=p.words[q.k]||(p.words[q.k]={box:0,ok:0,bad:0,first:t,due:t,tricky:false});
+  const right=!!opt.ok;
+  w.last=t;
+  if(right){w.ok++;w.box=Math.min(4,w.box+1);w.due=addDays(t,INTERVALS[w.box]);if(w.tricky&&w.ok>=2&&(w.streakOk=(w.streakOk||0)+1)>=2)w.tricky=false}
+  else{
+    w.bad++;w.box=0;w.due=t;w.tricky=true;w.streakOk=0;w.conf=w.conf||{};
+    opt.ks.forEach(k=>{if(!q.cks.includes(k)){w.conf[k]=(w.conf[k]||0)+1}});
+    const ks=Object.keys(w.conf);if(ks.length>6){ks.sort((a,b)=>w.conf[a]-w.conf[b]);delete w.conf[ks[0]]}
+  }
+  touch(id);
+  return right;
+}
+
+/* ================= ui state ================= */
+const S={screen:'login',who:null,role:null,pinBuf:'',pinErr:'',pinTarget:null,review:null,quiz:null,result:null,wq:'',wf:'all',peek:null,share:null,pl:null,anim:false,shake:false,msg:''};
+function go(screen){S.screen=screen;S.anim=false;render();window.scrollTo(0,0)}
+function render(){
+  const app=$('#app');
+  if(!data){app.innerHTML=vSetup();return}
+  const fn={login:vLogin,pin:vPin,home:vHome,review:vReview,reviewDone:vReviewDone,quiz:vQuiz,result:vResult,words:vWords,share:vShare,parent:vParent,plearner:vPLearner,ptransfer:vPTransfer}[S.screen]||vLogin;
+  app.innerHTML=fn();
+  S.anim=false;S.shake=false;
+}
+const av=(id,big)=>{const l=learner(id);return`<span class="av${big?' big':''}" style="--c:${l.color}">${esc(l.name[0])}</span>`};
+function accent(id){const l=id&&learner(id);return l?`style="--accent:${l.color}"`:''}
+
+/* ================= word card ================= */
+function partsHtml(i){
+  const w=WORDS[i];let c='';
+  if(w.p)c+=`<span class="chip pfx"><b>${esc(w.p[0])}</b> ${esc(w.p[1])}</span>`;
+  (w.r||[]).forEach(r=>{c+=`<span class="chip root"><b>${esc(r[0])}</b> ${esc(r[1])}</span>`});
+  if(w.x)c+=`<span class="chip sfx"><b>-${esc(w.x[0])}</b> ${esc(w.x[1])}</span>`;
+  const rel=(w.rel||[]).map(j=>WORDS[j].w);
+  if(!c&&!rel.length)return'';
+  return`<div class="parts"><h3>Word parts</h3>${c?`<div class="chips">${c}</div>`:''}${rel.length?`<p class="small muted" style="margin-top:8px">Related words: ${rel.map(esc).join(', ')}</p>`:''}</div>`;
+}
+function hiSent(i){const w=WORDS[i];return esc(w.s).replace(new RegExp('\\b'+escRe(esc(w.w))+'\\b','i'),m=>'<mark>'+m+'</mark>')}
+function cardBack(i){const w=WORDS[i];return`<h2 class="word" style="font-family:var(--ui)">${esc(w.w)}</h2><p class="meaning">${esc(cap(w.m))}</p>${w.y?`<p class="small muted" style="margin-top:6px">Similar word: <b>${esc(w.y)}</b></p>`:''}<p class="sent">${hiSent(i)}</p>${partsHtml(i)}`}
+
+/* ================= setup + login ================= */
+function vSetup(){
+  return`<div class="shell stack"><div class="hero"><h1>Welcome to Word Trail</h1><p class="muted" style="margin-top:8px">Each child gets a few new words a day, a quiz on what they have already met, and a parent view to follow along. First, choose a 4-digit PIN for each person. PINs are stored on this device only.</p></div>
+  <div class="card"><label class="f" for="pp">Parent PIN</label><input class="t" id="pp" type="password" inputmode="numeric" maxlength="4" autocomplete="off">
+  ${LEARNERS.map(l=>`<label class="f" for="p_${l.id}">${esc(l.name)}'s PIN</label><input class="t" id="p_${l.id}" type="password" inputmode="numeric" maxlength="4" autocomplete="off">`).join('')}
+  <p class="err" id="serr"></p><button class="btn primary block" data-act="setup" style="--accent:var(--ink)">Create profiles</button></div></div>`;
+}
+function vLogin(){
+  return`<div class="shell"><div class="hero"><h1>Word Trail</h1><p class="muted" style="margin-top:6px">Who is learning today?</p></div>
+  <div class="tiles">${LEARNERS.map(l=>`<button class="card tile" data-act="who" data-id="${l.id}">${av(l.id,1)}<span><span class="t">${esc(l.name)}</span><br><span class="muted small">${SET(l.id).perDay} new words a day</span></span></button>`).join('')}
+  <button class="card tile" data-act="who" data-id="parent"><span class="av big" style="--c:var(--ink)">P</span><span><span class="t">Parent</span><br><span class="muted small">Progress, settings, backups</span></span></button></div>
+  <p class="center small muted" style="margin-top:28px"><button class="link danger" data-act="wipe">Start over on this device</button></p></div>`;
+}
+function vPin(){
+  const who=S.pinTarget,isP=who==='parent';
+  const dots=[0,1,2,3].map(i=>`<span class="pin${i<S.pinBuf.length?' on':''}"></span>`).join('');
+  const keys=['1','2','3','4','5','6','7','8','9','back','0','del'].map(k=>k==='back'?`<button class="key" data-act="pinback" aria-label="Back">&larr;</button>`:k==='del'?`<button class="key" data-act="pindel" aria-label="Delete">&#9003;</button>`:`<button class="key" data-act="key" data-v="${k}">${k}</button>`).join('');
+  return`<div class="shell center"><div class="hero">${isP?`<span class="av big" style="--c:var(--ink)">P</span>`:av(who,1)}<h2 style="margin-top:10px">${isP?'Parent':esc(learner(who).name)}</h2><p class="muted">Enter your PIN</p></div>
+  <div class="pins${S.shake?' shake':''}">${dots}</div><p class="err" role="alert">${esc(S.pinErr)}</p><div class="keypad">${keys}</div></div>`;
+}
+
+/* ================= learner home ================= */
+function vHome(){
+  const id=S.who,l=learner(id),p=P(id),day=ensureToday(id),st=stats(id),n=day.ids.length;
+  const best=day.tests.reduce((b,t)=>Math.max(b,t.score),-1);
+  const lastT=day.tests[day.tests.length-1];
+  const finished=n===0&&!day.reviewDone;
+  const rev=day.reviewDone;
+  const stone1=`<div class="stone ${rev?'done':''}">${rev?'&#10003;':'1'}</div>`;
+  const stone2=`<div class="stone ${!rev?'lock':(day.tests.length?'done':'')}">${!rev?'&#128274;':(day.tests.length?'&#10003;':'2')}</div>`;
+  const keys=Object.keys(p.words);
+  keys.sort((a,b)=>String(p.words[a].first).localeCompare(String(p.words[b].first)));
+  const dots=keys.map(k=>{const w=p.words[k];return`<button class="dot s${stage(w)}${w.tricky?' t':''}" data-act="peek" data-k="${esc(k)}" title="${esc(k)}" aria-label="${esc(k)}"></button>`}).join('');
+  return`<div class="shell stack" ${accent(id)}>
+  <div class="bar">${av(id)}<span class="name grow">${esc(l.name)}</span><button class="btn sm" data-act="logout">Switch</button></div>
+  <div class="card"><h2>${st.streak?`${st.streak}-day streak`:'Today\'s trail'}</h2><p class="muted small" style="margin-bottom:16px">${finished?'You have finished the whole word list. Amazing!':`Review ${n} new word${n===1?'':'s'}, then take a quiz on everything you have met.`}</p>
+  <div class="trail">
+    <div class="step">${stone1}<h2>Meet today's words</h2><p class="muted small">${rev?`All ${n} reviewed`:`${n} new word${n===1?'':'s'} waiting`}</p>
+      <div style="margin-top:10px"><button class="btn ${rev?'':'primary'}" data-act="startReview" ${n?'':'disabled'}>${rev?'Look at them again':'Start review'}</button></div></div>
+    <div class="step">${stone2}<h2>Today's quiz</h2><p class="muted small">${!rev?'Unlocks when you finish the review':lastT?`Best today: ${best} of ${lastT.total}`:`${Math.min(SET(id).quizLen,keys.length)} questions on words you have reviewed`}</p>
+      <div style="margin-top:10px"><button class="btn ${rev&&!day.tests.length?'primary':''}" data-act="startQuiz" ${rev?'':'disabled'}>${day.tests.length?'Try another quiz':'Start quiz'}</button></div></div>
+  </div></div>
+  <div class="card"><div class="row between"><h2>My garden</h2><span class="muted small">${st.learned} word${st.learned===1?'':'s'}</span></div>
+    ${keys.length?`<div class="dots" style="margin:12px 0">${dots}</div><div class="legend"><span><i style="background:var(--seed)"></i>just met</span><span><i style="background:#BFE3D1"></i>growing</span><span><i style="background:#6FC29D"></i>strong</span><span><i style="background:var(--sun)"></i>almost mine</span><span><i style="background:#E67FA0"></i>mine</span><span><i style="box-shadow:0 0 0 2px var(--berry)"></i>tricky</span></div>`:`<p class="muted" style="margin-top:8px">Words you review will start growing here.</p>`}
+    ${S.peek&&WI.has(S.peek)?`<div class="card flat" style="margin-top:14px">${cardBack(WI.get(S.peek))}<div style="margin-top:10px"><button class="btn sm" data-act="peek" data-k="">Close</button></div></div>`:''}
+  </div>
+  <div class="row wrap">${st.tricky?`<button class="btn" data-act="practiceTricky">Revisit tricky words (${st.tricky})</button>`:''}<button class="btn" data-act="goWords">My words</button><button class="btn" data-act="goShare">Send progress to parent</button></div></div>`;
+}
+
+/* ================= review (flashcards) ================= */
+function vReview(){
+  const r=S.review,id=r.id,k=r.queue[0],i=WI.get(k),w=WORDS[i];
+  const done=r.total-r.queue.length,pct=Math.round(100*done/r.total);
+  const front=`<button class="speak" data-act="speak" data-k="${esc(k)}" aria-label="Hear the word">&#9835;</button><div class="word">${esc(w.w)}</div><p class="hint">Tap the card to see the meaning</p>`;
+  const back=cardBack(i)+`<button class="speak" data-act="speak" data-k="${esc(k)}" aria-label="Hear the word">&#9835;</button>`;
+  return`<div class="shell stack" ${accent(id)}>
+  <div class="row between"><button class="btn sm" data-act="home">Close</button><span class="muted">${r.mode==='new'?'New words':'Practice'} &middot; ${r.queue.length} to go</span></div>
+  <div class="prog" aria-hidden="true"><i style="width:${pct}%"></i></div>
+  <div class="card flash ${r.flipped?'back':''} ${S.anim?'flipin':''}" data-act="flip" tabindex="0" role="button" aria-label="Flashcard. Tap to flip">${r.flipped?back:front}</div>
+  ${r.flipped?`<div class="row"><button class="btn grow" data-act="again">Show me again</button><button class="btn primary grow" data-act="got">Got it</button></div>`:`<button class="btn block" data-act="flip">Show meaning</button>`}
+  </div>`;
+}
+function vReviewDone(){
+  const id=S.who,day=ensureToday(id);
+  return`<div class="shell stack center" ${accent(id)}><div class="hero">${av(id,1)}<h1 style="margin-top:12px">Review complete</h1><p class="muted" style="margin-top:6px">${day.ids.length} word${day.ids.length===1?'':'s'} added to your garden. Your quiz is unlocked.</p></div>
+  <button class="btn primary block" data-act="startQuiz">Take the quiz now</button><button class="btn block" data-act="home">Back to my trail</button></div>`;
+}
+function finishReview(){
+  const id=S.review.id,p=P(id),t=todayStr(),day=ensureToday(id);
+  day.ids.forEach(k=>{if(!p.words[k])p.words[k]={box:S.review.rate[k]==='got'?1:0,ok:0,bad:0,first:t,due:t,tricky:false}});
+  day.reviewDone=true;day.reviewedAt=Date.now();touch(id);save();
+  S.review=null;go('reviewDone');
+}
+
+/* ================= quiz ================= */
+function filledSent(q){
+  const w=WORDS[WI.get(q.k)];
+  if(q.type==='sc1')return hiSent(WI.get(q.k));
+  let n=0;return esc(w.q[0]).replace(/___/g,()=>'<mark>'+esc(w.q[++n])+'</mark>');
+}
+function vQuiz(){
+  const Q=S.quiz,q=Q.qs[Q.i],id=Q.id,answered=Q.picked!=null,i=WI.get(q.k),w=WORDS[i];
+  const pct=Math.round(100*Q.i/Q.qs.length);
+  const letters='ABCD';
+  const opts=q.opts.map((o,j)=>{let c='opt';if(answered){if(j===q.ans)c+=' right';else if(j===Q.picked)c+=' wrong';else c+=' dim'}
+    return`<button class="${c}" data-act="pick" data-i="${j}" ${answered?'disabled':''}><span class="ltr">${letters[j]}</span><span>${esc(o.t)}</span></button>`}).join('');
+  let fb='';
+  if(answered){
+    const right=Q.picked===q.ans,ch=q.opts[Q.picked];
+    let main='',extra='';
+    if(q.type==='syn'){
+      main=`<p><b>${esc(w.w)}</b> means ${esc(w.m)}. A close word: <b>${esc(w.y)}</b>.</p>`;
+      if(!right){const ci=WI.get(ch.ks[0]);extra=`<p class="small" style="margin-top:6px"><b>${esc(ch.t)}</b> belongs with <b>${esc(WORDS[ci].w)}</b>, which means ${esc(WORDS[ci].m)}.</p>`}
+    }else if(q.type==='sc1'){
+      main=`<p class="small" style="font-style:italic">${filledSent(q)}</p><p style="margin-top:6px"><b>${esc(w.w)}</b>: ${esc(w.m)}</p>`;
+      if(!right){const ci=WI.get(ch.ks[0]);extra=`<p class="small" style="margin-top:6px"><b>${esc(WORDS[ci].w)}</b> means: ${esc(WORDS[ci].m)}.</p>`}
+    }else{
+      main=`<p class="small" style="font-style:italic">${filledSent(q)}</p>`+q.cks.map(k=>{const j=WI.get(k);return`<p class="small" style="margin-top:4px"><b>${esc(WORDS[j].w)}</b>: ${esc(WORDS[j].m)}</p>`}).join('');
+      if(!right){extra=ch.ks.filter(k=>!q.cks.includes(k)).map(k=>{const j=WI.get(k);return`<p class="small" style="margin-top:6px">Not <b>${esc(WORDS[j].w)}</b>, which means: ${esc(WORDS[j].m)}.</p>`}).join('')}
+    }
+    fb=`<div class="fb ${right?'good':'bad'}" role="status"><h3>${right?'Right!':'Not quite'}</h3>${main}${extra}${partsHtml(i)}
+    <div class="row" style="margin-top:10px"><button class="btn sm" data-act="speak" data-k="${esc(q.k)}">Hear it</button></div></div>
+    <button class="btn primary block" style="margin-top:14px" data-act="next">${Q.i+1>=Q.qs.length?'See my score':'Next question'}</button>`;
+  }
+  return`<div class="shell stack" ${accent(id)}>
+  <div class="row between"><button class="btn sm" data-act="quitQuiz">Quit</button><span class="muted">Question ${Q.i+1} of ${Q.qs.length}</span></div>
+  <div class="prog" aria-hidden="true"><i style="width:${pct}%"></i></div>
+  <div class="card q"><p class="kind">${esc(q.ptype)}</p><p class="prompt ${q.type==='syn'?'syn':'sent'}">${esc(q.prompt)}</p>${opts}</div>${fb}</div>`;
+}
+function vResult(){
+  const R=S.result,id=R.id,pct=Math.round(100*R.score/R.total);
+  const msg=pct>=90?'Outstanding. These words are really yours.':pct>=70?'Strong work. A few tricky ones to keep an eye on.':pct>=50?'Good effort. The tricky words will come back so they can stick.':'Tough round, and that is how words stick. Look over the misses below.';
+  const missed=R.items.filter(x=>!x.ok);
+  return`<div class="shell stack" ${accent(id)}><div class="card center"><p class="muted">Quiz finished</p><div class="score">${R.score}<span class="muted" style="font-size:1.6rem"> / ${R.total}</span></div><p style="margin-top:8px">${esc(msg)}</p></div>
+  ${missed.length?`<div class="card"><h2>Words to look at again</h2><p class="small muted">They are marked tricky and will show up more often.</p><div style="margin-top:8px">${missed.map(m=>{const w=WORDS[WI.get(m.k)];return`<div class="miss"><b class="ui">${esc(w.w)}</b><br><span class="small">${esc(cap(w.m))}</span></div>`}).join('')}</div></div>`:`<div class="card center"><h2>No misses</h2><p class="muted">Every answer was right.</p></div>`}
+  <div class="stack-s">${missed.length?`<button class="btn primary block" data-act="practiceMissed">Practice the missed words</button>`:''}<button class="btn block" data-act="startQuiz">Take another quiz</button><button class="btn block" data-act="home">Back to my trail</button></div></div>`;
+}
+
+/* ================= my words ================= */
+function vWords(){
+  const id=S.who,p=P(id);
+  let keys=Object.keys(p.words);
+  const q=S.wq.trim().toLowerCase();
+  if(q)keys=keys.filter(k=>k.includes(q));
+  if(S.wf==='tricky')keys=keys.filter(k=>p.words[k].tricky);
+  keys.sort();
+  const tabs=[['all','All'],['tricky','Tricky']].map(t=>`<button class="btn sm ${S.wf===t[0]?'primary':''}" data-act="wf" data-v="${t[0]}">${t[1]}</button>`).join(' ');
+  const rows=keys.slice(0,200).map(k=>{const w=p.words[k],i=WI.get(k);return`<tr data-act="peek2" data-k="${esc(k)}" style="cursor:pointer"><td style="width:24px"><span class="dot s${stage(w)}${w.tricky?' t':''}" style="display:inline-block"></span></td><td><b class="ui">${esc(WORDS[i].w)}</b><br><span class="small muted">${esc(qdef(WORDS[i].m))}</span></td></tr>`}).join('');
+  return`<div class="shell stack" ${accent(id)}><div class="row between"><button class="btn sm" data-act="home">Back</button><span class="muted">${keys.length} word${keys.length===1?'':'s'}</span></div>
+  <div class="row wrap"><input class="t grow" id="wsearch" placeholder="Search my words" value="${esc(S.wq)}" aria-label="Search my words">${tabs}</div>
+  ${S.peek&&WI.has(S.peek)?`<div class="card">${cardBack(WI.get(S.peek))}<div style="margin-top:10px"><button class="btn sm" data-act="peek2" data-k="">Close</button></div></div>`:''}
+  <div class="card flat"><table class="tbl"><tbody>${rows||'<tr><td class="muted">Nothing here yet.</td></tr>'}</tbody></table>${keys.length>200?'<p class="small muted">Showing the first 200.</p>':''}</div></div>`;
+}
+
+/* ================= share code ================= */
+function b64(u8){let s='';for(let i=0;i<u8.length;i+=8192)s+=String.fromCharCode.apply(null,u8.subarray(i,i+8192));return btoa(s)}
+function unb64(s){const b=atob(s),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u}
+async function encodeProg(id){
+  const s=JSON.stringify({app:'wordtrail',v:1,id,name:learner(id).name,ts:Date.now(),prog:P(id)});
+  if(window.CompressionStream){const cs=new CompressionStream('gzip'),w=cs.writable.getWriter();w.write(new TextEncoder().encode(s));w.close();return'G1.'+b64(new Uint8Array(await new Response(cs.readable).arrayBuffer()))}
+  return'P1.'+b64(new TextEncoder().encode(s));
+}
+async function decodeProg(code){
+  code=code.trim();const tag=code.slice(0,3),body=code.slice(3);let txt;
+  if(tag==='G1.'){const ds=new DecompressionStream('gzip'),w=ds.writable.getWriter();w.write(unb64(body));w.close();txt=await new Response(ds.readable).text()}
+  else if(tag==='P1.')txt=new TextDecoder().decode(unb64(body));
+  else throw new Error('That does not look like a progress code.');
+  const o=JSON.parse(txt);if(o.app!=='wordtrail'||!learner(o.id)||!o.prog||!o.prog.words)throw new Error('That code is not valid.');
+  return o;
+}
+function download(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:type||'text/plain'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
+function vShare(){
+  const id=S.who,c=S.share&&S.share.code;
+  return`<div class="shell stack" ${accent(id)}><div class="row between"><button class="btn sm" data-act="home">Back</button></div>
+  <div class="card"><h2>Send progress to a parent</h2><p class="muted small" style="margin:6px 0 12px">Copy this code and send it to your parent in a message. They can paste it into Word Trail on their device, under Parent, then Backup and transfer. You can also save it as a file.</p>
+  <textarea class="t" id="code" readonly aria-label="Progress code">${c?esc(c):'Making your code…'}</textarea>
+  <div class="row wrap" style="margin-top:12px"><button class="btn primary" data-act="copyCode" ${c?'':'disabled'}>Copy code</button><button class="btn" data-act="saveCode" ${c?'':'disabled'}>Save as file</button>${navigator.share?`<button class="btn" data-act="shareCode" ${c?'':'disabled'}>Share</button>`:''}</div></div></div>`;
+}
+
+/* ================= parent ================= */
+function ago(ts){if(!ts)return'never';const d=diffDays(fmt(new Date(ts)),todayStr());return d===0?'today':d===1?'yesterday':d+' days ago'}
+function dayStatus(id){const d=P(id).days[todayStr()];if(!d)return'<span class="pill no">not started</span>';return`${d.reviewDone?'<span class="pill ok">reviewed</span>':'<span class="pill no">review pending</span>'} ${d.tests.length?`<span class="pill ok">quiz ${d.tests.slice(-1)[0].score}/${d.tests.slice(-1)[0].total}</span>`:'<span class="pill no">no quiz yet</span>'}`}
+function vParent(){
+  const cards=LEARNERS.map(l=>{const st=stats(l.id),s=SET(l.id);
+    return`<div class="card" style="--accent:${l.color}"><div class="row">${av(l.id)}<h2 class="grow">${esc(l.name)}</h2><button class="btn sm primary" data-act="openL" data-id="${l.id}">Details</button></div>
+    <div style="margin:10px 0 6px">${dayStatus(l.id)}</div>
+    <div class="kv"><span>Words learned</span><b>${st.learned} of ${playable(l.id)}</b></div>
+    <div class="kv"><span>Strong or mastered</span><b>${st.mastered}</b></div>
+    <div class="kv"><span>Quiz accuracy</span><b>${st.acc==null?'-':st.acc+'%'}</b></div>
+    <div class="kv"><span>Tricky words</span><b>${st.tricky}</b></div>
+    <div class="kv"><span>Day streak</span><b>${st.streak}</b></div>
+    <div class="kv"><span>Last active</span><b>${st.lastDay?esc(st.lastDay):'never'}</b></div>
+    <div class="kv"><span>Plan</span><b>${s.perDay} new a day</b></div></div>`}).join('');
+  return`<div class="shell wide stack"><div class="bar"><span class="av" style="--c:var(--ink)">P</span><span class="name grow">Parent</span><button class="btn sm" data-act="logout">Switch</button></div>
+  <div class="grid2">${cards}</div>
+  <div class="row wrap"><button class="btn" data-act="goTransfer">Backup and transfer</button></div>
+  <p class="small muted">Progress is stored in this browser. If your children learn on other devices, they can send a progress code and you can import it under Backup and transfer.</p></div>`;
+}
+function svgBars(vals,labels,color,max,suffix){
+  const W=560,H=150,pad=18,bw=(W-2*pad)/vals.length;
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img"><line x1="${pad}" y1="${H-24}" x2="${W-pad}" y2="${H-24}" stroke="#1D2A4B" stroke-width="2"/>`;
+  vals.forEach((v,i)=>{const x=pad+i*bw+4,cx=x+(bw-8)/2;
+    if(v!=null){const h=v>0?Math.max(3,Math.round((H-52)*Math.min(v,max)/max)):0;s+=(h?`<rect x="${x}" y="${H-24-h}" width="${bw-8}" height="${h}" rx="4" fill="${color}" stroke="#1D2A4B" stroke-width="2"/>`:'')+`<text x="${cx}" y="${H-28-h}" text-anchor="middle" font-size="14" font-weight="600" font-family="Fredoka,system-ui,sans-serif" fill="#1D2A4B">${v}${suffix||''}</text>`}
+    if(i%2===vals.length%2)s+=`<text x="${cx}" y="${H-6}" text-anchor="middle" font-size="13" font-family="Fredoka,system-ui,sans-serif" fill="#56627F">${labels[i]}</text>`});
+  return s+'</svg>';
+}
+function vPLearner(){
+  const id=S.pl,l=learner(id),p=P(id),st=stats(id),s=SET(id);
+  const days=[];for(let i=13;i>=0;i--)days.push(addDays(todayStr(),-i));
+  const labels=days.map(d=>{const a=d.split('-');return+a[1]+'/'+(+a[2])});
+  const newW=days.map(d=>{const x=p.days[d];return x&&x.reviewDone?x.ids.length:0});
+  const score=days.map(d=>{const x=p.days[d];if(!x||!x.tests.length)return null;return Math.max(...x.tests.map(t=>Math.round(100*t.score/t.total)))});
+  const tricky=Object.keys(p.words).filter(k=>p.words[k].bad>0).sort((a,b)=>p.words[b].bad-p.words[a].bad||p.words[a].ok-p.words[b].ok).slice(0,10);
+  const trows=tricky.map(k=>{const w=p.words[k],i=WI.get(k),cf=Object.keys(w.conf||{}).sort((a,b)=>w.conf[b]-w.conf[a]).slice(0,2).map(c=>WI.has(c)?WORDS[WI.get(c)].w:c);
+    return`<tr><td><b class="ui">${esc(WORDS[i].w)}</b><br><span class="small muted">${esc(qdef(WORDS[i].m))}</span></td><td>${w.ok} right<br>${w.bad} missed</td><td class="small">${cf.length?esc(cf.join(', ')):'-'}</td></tr>`}).join('');
+  const tests=p.tests.slice(-8).reverse().map(t=>`<tr><td>${esc(t.d)}</td><td>${t.score} of ${t.total}</td><td>${Math.round(100*t.score/t.total)}%</td></tr>`).join('');
+  const lvl=['U','M','F'].map(k=>{const b=st.byLv[k];return`<div class="kv"><span>${LV[k]} words</span><b>${b[1]?Math.round(100*b[0]/b[1])+'% ('+b[1]+' answers)':'-'}</b></div>`}).join('');
+  const TN={syn:'Synonyms',sc1:'One-blank sentences',sc2:'Paired-word sentences'};
+  const typeRows=Object.keys(TN).map(k=>{const b=st.byType[k];return`<div class="kv"><span>${TN[k]}</span><b>${b[1]?Math.round(100*b[0]/b[1])+'% ('+b[1]+')':'-'}</b></div>`}).join('');
+  const opt=(v,t,cur)=>`<option value="${v}" ${v===cur?'selected':''}>${t}</option>`;
+  return`<div class="shell wide stack" style="--accent:${l.color}"><div class="bar"><button class="btn sm" data-act="parentHome">Back</button>${av(id)}<span class="name grow">${esc(l.name)}</span></div>
+  <div class="grid2"><div class="card"><h2>At a glance</h2><div style="margin:8px 0">${dayStatus(id)}</div>
+    <div class="kv"><span>Words learned</span><b>${st.learned} of ${playable(l.id)}</b></div><div class="kv"><span>Strong or mastered</span><b>${st.mastered}</b></div><div class="kv"><span>Quiz accuracy</span><b>${st.acc==null?'-':st.acc+'%'}</b></div><div class="kv"><span>Quizzes taken</span><b>${st.tests}</b></div><div class="kv"><span>Day streak</span><b>${st.streak}</b></div>${lvl}${typeRows}</div>
+  <div class="card"><h2>Last 14 days</h2><p class="small muted">Best quiz score each day (percent)</p><div class="svgwrap">${svgBars(score,labels,l.color,100,'%')}</div><p class="small muted" style="margin-top:6px">New words reviewed each day</p><div class="svgwrap">${svgBars(newW,labels,'#F6B93B',Math.max(5,...newW))}</div></div></div>
+  <div class="card"><h2>Trickiest words</h2><p class="small muted" style="margin-bottom:6px">Words missed most, with the words they were mixed up with.</p>${tricky.length?`<table class="tbl"><thead><tr><th>Word</th><th>Record</th><th>Mixed up with</th></tr></thead><tbody>${trows}</tbody></table>`:'<p class="muted">No misses yet.</p>'}</div>
+  <div class="card"><h2>Recent quizzes</h2>${tests?`<table class="tbl"><thead><tr><th>Date</th><th>Score</th><th>Percent</th></tr></thead><tbody>${tests}</tbody></table>`:'<p class="muted">No quizzes yet.</p>'}</div>
+  <div class="card"><h2>Settings for ${esc(l.name)}</h2>
+    <label class="f" for="s_perDay">New words per day</label><input class="t" id="s_perDay" type="number" min="1" max="60" value="${s.perDay}" data-set="perDay">
+    <label class="f" for="s_quizLen">Questions in each quiz</label><input class="t" id="s_quizLen" type="number" min="5" max="60" value="${s.quizLen}" data-set="quizLen">
+    <label class="f" for="s_order">Word order</label><select class="t" id="s_order" data-set="order">${opt('hard','Hardest first (Upper, then Middle, then Foundation)',s.order)}${opt('easy','Easiest first (Foundation, Middle, Upper)',s.order)}${opt('mixed','Mixed',s.order)}</select>
+    <label class="f"><input type="checkbox" id="s_mature" data-set="mature" ${s.mature?'checked':''}> Include a few words with mature meanings</label>
+    <p class="small muted" style="margin-top:8px">Changes apply from the next new set of words. Words already learned stay learned.</p>
+    <hr class="d"><label class="f" for="np_${id}">Set a new PIN for ${esc(l.name)}</label><div class="row"><input class="t" id="np_${id}" type="password" inputmode="numeric" maxlength="4" placeholder="4 digits"><button class="btn" data-act="setpin" data-who="${id}">Save PIN</button></div>
+    <hr class="d"><button class="link danger" data-act="resetL" data-id="${id}">Reset ${esc(l.name)}'s progress</button></div></div>`;
+}
+function vPTransfer(){
+  return`<div class="shell stack"><div class="bar"><button class="btn sm" data-act="parentHome">Back</button><span class="name grow">Backup and transfer</span></div>
+  <div class="card"><h2>Import a progress code</h2><p class="small muted" style="margin:6px 0 10px">Paste the code a child sent from another device. It replaces that child's progress on this device.</p><textarea class="t" id="impcode" placeholder="Paste progress code here"></textarea><p class="err" id="imperr"></p><button class="btn primary" data-act="importCode" style="--accent:var(--ink)">Import</button></div>
+  <div class="card"><h2>Back up everything</h2><p class="small muted" style="margin:6px 0 10px">Saves all profiles, settings, and progress as a file.</p><button class="btn" data-act="backup">Download backup</button></div>
+  <div class="card"><h2>Restore from a backup</h2><p class="small muted" style="margin:6px 0 10px">This replaces everything on this device.</p><input class="t" type="file" id="restorefile" accept=".json,application/json"></div>
+  <div class="card"><h2>Parent PIN</h2><div class="row"><input class="t" id="np_parent" type="password" inputmode="numeric" maxlength="4" placeholder="New 4-digit PIN"><button class="btn" data-act="setpin" data-who="parent">Save PIN</button></div></div></div>`;
+}
+
+/* ================= events ================= */
+async function verifyPin(){
+  const who=S.pinTarget,ok=await checkPin(who,S.pinBuf);
+  if(ok){
+    S.pinErr='';S.pinBuf='';
+    if(who==='parent'){S.role='parent';S.who=null;go('parent')}
+    else{S.role='learner';S.who=who;ensureToday(who);go('home')}
+  }else{S.shake=true;S.pinErr='That PIN does not match. Try again.';S.pinBuf='';render()}
+}
+function startPractice(id,keys){
+  if(!keys.length){toast('Nothing to practice right now.');return}
+  S.review={mode:'practice',id,queue:keys.slice(),total:keys.length,flipped:false,rate:{},retries:{}};
+  go('review');
+}
+async function copyText(t){
+  try{await navigator.clipboard.writeText(t);toast('Copied');return}catch(e){}
+  const ta=$('#code');if(ta){ta.removeAttribute('readonly');ta.select();try{document.execCommand('copy');toast('Copied')}catch(x){toast('Select the text and copy it')}ta.setAttribute('readonly','')}
+}
+document.addEventListener('click',async e=>{
+  const el=e.target.closest('[data-act]');if(!el)return;
+  const a=el.dataset.act,d=el.dataset;
+  switch(a){
+    case'setup':{
+      const pp=$('#pp').value.trim(),v={parent:pp};LEARNERS.forEach(l=>{v[l.id]=$('#p_'+l.id).value.trim()});
+      const err=$('#serr');
+      if(!Object.values(v).every(x=>/^\d{4}$/.test(x))){err.textContent='Every PIN must be exactly 4 digits.';return}
+      if(new Set(Object.values(v)).size<Object.keys(v).length){err.textContent='Please use a different PIN for each person.';return}
+      const salt=Math.random().toString(36).slice(2)+Date.now().toString(36);
+      const pins={};for(const k of Object.keys(v))pins[k]=await hashPin(v[k],salt);
+      data={v:1,salt,pins,settings:{},prog:{},created:Date.now()};
+      LEARNERS.forEach(l=>{data.settings[l.id]=Object.assign({mature:false},l.def);data.prog[l.id]=newProg()});
+      save();S.screen='login';render();break}
+    case'who':S.pinTarget=d.id;S.pinBuf='';S.pinErr='';go('pin');break;
+    case'key':if(S.pinBuf.length<4){S.pinBuf+=d.v;render();if(S.pinBuf.length===4)verifyPin()}break;
+    case'pindel':S.pinBuf=S.pinBuf.slice(0,-1);render();break;
+    case'pinback':go('login');break;
+    case'logout':case'parentLogout':S.who=null;S.role=null;S.review=null;S.quiz=null;S.peek=null;go('login');break;
+    case'wipe':if(confirm('This erases every profile, PIN and all progress on this device. Continue?')){localStorage.removeItem(KEY);data=null;S.screen='login';render()}break;
+    case'home':S.review=null;S.quiz=null;S.peek=null;go('home');break;
+    case'parentHome':go('parent');break;
+    /* review */
+    case'startReview':{
+      const id=S.who,day=ensureToday(id);
+      if(!day.ids.length){toast('No new words today.');break}
+      S.review={mode:day.reviewDone?'practice':'new',id,queue:day.ids.slice(),total:day.ids.length,flipped:false,rate:{},retries:{}};
+      go('review');break}
+    case'flip':if(S.review&&!S.review.flipped){S.review.flipped=true;S.anim=true;render()}break;
+    case'got':{
+      const r=S.review,k=r.queue.shift();r.rate[k]=r.retries[k]?'again':'got';r.flipped=false;
+      if(!r.queue.length){if(r.mode==='new')finishReview();else{S.review=null;toast('Nice work');go('home')}}
+      else render();break}
+    case'again':{
+      const r=S.review,k=r.queue[0];r.retries[k]=(r.retries[k]||0)+1;r.queue.push(r.queue.shift());r.flipped=false;render();break}
+    case'speak':speak(WORDS[WI.get(d.k)].w);break;
+    /* practice */
+    case'practiceTricky':{
+      const id=S.who,p=P(id);
+      const ks=Object.keys(p.words).filter(k=>p.words[k].tricky).sort((x,y)=>p.words[y].bad-p.words[x].bad).slice(0,15);
+      startPractice(id,ks);break}
+    case'practiceMissed':startPractice(S.result.id,S.result.items.filter(x=>!x.ok).map(x=>x.k));break;
+    /* quiz */
+    case'startQuiz':{
+      const id=S.who,day=ensureToday(id);
+      if(!day.reviewDone){toast('Finish today\'s review first.');break}
+      const qs=buildQuiz(id);
+      if(!qs.length){toast('No words to quiz yet.');break}
+      S.quiz={id,qs,i:0,picked:null,items:[]};go('quiz');break}
+    case'pick':{
+      const Q=S.quiz;if(!Q||Q.picked!=null)break;
+      const q=Q.qs[Q.i],j=+d.i,opt=q.opts[j];
+      const ok=recordAnswer(Q.id,q,opt);
+      Q.picked=j;Q.items.push({k:q.k,ok,ty:q.type});save();render();
+      const fb=$('.fb');if(fb&&fb.scrollIntoView)fb.scrollIntoView({behavior:'smooth',block:'nearest'});break}
+    case'next':{
+      const Q=S.quiz;Q.i++;Q.picked=null;
+      if(Q.i>=Q.qs.length){
+        const score=Q.items.filter(x=>x.ok).length,total=Q.items.length,id=Q.id,t=todayStr();
+        const day=ensureToday(id);
+        day.tests.push({t:Date.now(),score,total,items:Q.items.map(x=>({k:x.k,ok:x.ok,ty:x.ty}))});
+        P(id).tests.push({d:t,t:Date.now(),score,total});
+        touch(id);save();
+        S.result={id,score,total,items:Q.items};S.quiz=null;go('result');
+      }else{render();window.scrollTo(0,0)}
+      break}
+    case'quitQuiz':if(confirm('Leave this quiz? Your answers so far are kept for learning, but the score will not be saved.')){S.quiz=null;go('home')}break;
+    /* words + share */
+    case'goWords':S.wq='';S.wf='all';S.peek=null;go('words');break;
+    case'wf':S.wf=d.v;render();break;
+    case'peek':case'peek2':S.peek=d.k||null;render();break;
+    case'goShare':{S.share=null;go('share');const id=S.who;try{const code=await encodeProg(id);S.share={code};if(S.screen==='share')render()}catch(err){toast('Could not make a code on this device')}break}
+    case'copyCode':copyText(S.share.code);break;
+    case'saveCode':download('wordtrail-'+S.who+'-progress.txt',S.share.code);break;
+    case'shareCode':try{await navigator.share({title:'Word Trail progress',text:S.share.code})}catch(err){}break;
+    /* parent */
+    case'openL':S.pl=d.id;go('plearner');break;
+    case'goTransfer':go('ptransfer');break;
+    case'importCode':{
+      const err=$('#imperr');err.textContent='';
+      try{
+        const o=await decodeProg($('#impcode').value);
+        const w=Object.keys(o.prog.words).length;
+        if(confirm(`Replace ${o.name}'s progress on this device with the imported one (${w} words, ${o.prog.tests.length} quizzes)?`)){
+          data.prog[o.id]=o.prog;save();toast('Imported '+o.name+"'s progress");S.pl=o.id;go('plearner');
+        }
+      }catch(ex){err.textContent=ex.message||'Could not read that code.'}
+      break}
+    case'backup':download('wordtrail-backup-'+todayStr()+'.json',JSON.stringify(data),'application/json');break;
+    case'setpin':{
+      const who=d.who,inp=$('#np_'+who),v=inp.value.trim();
+      if(!/^\d{4}$/.test(v)){toast('The PIN must be 4 digits');break}
+      for(const k of Object.keys(data.pins)){if(k!==who&&await checkPin(k,v)){toast('That PIN is already used by someone else');return}}
+      data.pins[who]=await hashPin(v,data.salt);save();inp.value='';toast('PIN updated');break}
+    case'resetL':if(confirm('Erase all of '+learner(d.id).name+"'s progress? This cannot be undone.")){data.prog[d.id]=newProg();save();toast('Progress reset');render()}break;
+  }
+});
+document.addEventListener('input',e=>{
+  if(e.target.id==='wsearch'){S.wq=e.target.value;render();const el=$('#wsearch');if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length)}}
+});
+document.addEventListener('change',e=>{
+  const t=e.target;
+  if(t.dataset&&t.dataset.set&&S.pl){
+    const s=SET(S.pl),f=t.dataset.set;
+    if(f==='perDay')s.perDay=Math.max(1,Math.min(60,parseInt(t.value,10)||s.perDay));
+    else if(f==='quizLen')s.quizLen=Math.max(5,Math.min(60,parseInt(t.value,10)||s.quizLen));
+    else if(f==='order')s.order=t.value;
+    else if(f==='mature')s.mature=t.checked;
+    save();toast('Saved');render();
+  }
+  if(t.id==='restorefile'&&t.files&&t.files[0]){
+    const fr=new FileReader();
+    fr.onload=()=>{try{const o=JSON.parse(fr.result);if(o.v!==1||!o.pins||!o.prog)throw 0;
+      if(confirm('Replace everything on this device with this backup?')){data=o;save();toast('Backup restored');S.screen='login';render()}}catch(x){toast('That file is not a Word Trail backup')}};
+    fr.readAsText(t.files[0]);
+  }
+});
+document.addEventListener('keydown',e=>{
+  if((e.key==='Enter'||e.key===' ')&&e.target.dataset&&e.target.dataset.act==='flip'){e.preventDefault();e.target.click()}
+});
+
+if(location.hash==='#debug')window.__wq={makeQ,makeSyn,makeSc1,makeSc2,assignTypes,WORDS,KEYS,WI,P,SET,ensureToday,buildQuiz,stats,pickDistractors,data:()=>data};
+render();
+if('serviceWorker' in navigator&&location.protocol!=='file:')navigator.serviceWorker.register('sw.js').catch(()=>{});
+})();
+</script>
+</body>
+</html>
