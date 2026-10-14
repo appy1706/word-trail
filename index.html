@@ -154,8 +154,8 @@ hr.d{border:0;border-top:2px dashed var(--line);margin:14px 0}
 /* ================= basics ================= */
 const KEY='wordtrail.v1';
 const LEARNERS=[
-  {id:'samaira',name:'Samaira',color:'#2E8F6B',def:{perDay:25,quizLen:25,order:'hard'}},
-  {id:'arjun',name:'Arjun',color:'#4A7AE4',def:{perDay:5,quizLen:10,order:'easy'}}
+  {id:'samaira',name:'Samaira',color:'#2E8F6B',def:{perDay:25,quizLen:25,order:'hard',extraMax:25}},
+  {id:'arjun',name:'Arjun',color:'#4A7AE4',def:{perDay:5,quizLen:10,order:'easy',extraMax:10}}
 ];
 const LV={U:'Upper',M:'Middle',F:'Foundation'};
 const INTERVALS=[1,2,4,8,16];
@@ -263,6 +263,9 @@ function ensureToday(id){
   touch(id);save();
   return p.days[t];
 }
+function takeNew(id,n){const p=P(id),used=assignedSet(id),out=[];for(const k of queueFor(id)){if(out.length>=n)break;if(!used.has(k)&&!p.words[k])out.push(k)}return out}
+function extraMax(id){const v=SET(id).extraMax;return v==null?learner(id).def.extraMax:v}
+function extraLeft(id){const d=ensureToday(id);return Math.max(0,extraMax(id)-(d.extra||0))}
 function dayComplete(d){return d&&d.reviewDone&&d.tests.length>0}
 function streak(id){
   const p=P(id);let d=todayStr();
@@ -422,7 +425,7 @@ function recordAnswer(id,q,opt){
 }
 
 /* ================= ui state ================= */
-const S={screen:'login',who:null,role:null,pinBuf:'',pinErr:'',pinTarget:null,review:null,quiz:null,result:null,wq:'',wf:'all',peek:null,share:null,pl:null,anim:false,shake:false,msg:''};
+const S={extraN:5,doneN:0,doneExtra:false,screen:'login',who:null,role:null,pinBuf:'',pinErr:'',pinTarget:null,review:null,quiz:null,result:null,wq:'',wf:'all',peek:null,share:null,pl:null,anim:false,shake:false,msg:''};
 function go(screen){S.screen=screen;S.anim=false;render();window.scrollTo(0,0)}
 function render(){
   const app=$('#app');
@@ -475,6 +478,10 @@ function vHome(){
   const lastT=day.tests[day.tests.length-1];
   const finished=n===0&&!day.reviewDone;
   const rev=day.reviewDone;
+  const base=n-(day.extra||0);
+  const left=extraLeft(id),avail=rev?takeNew(id,1).length:0;
+  const xn=Math.max(1,Math.min(S.extraN||5,Math.max(1,left)));
+  const extraCard=(rev&&left>0&&avail>0)?`<div class="card"><h2>Want more words today?</h2><p class="muted small" style="margin:2px 0 12px">Pick how many bonus words to add. You can add up to ${left} more today.${day.extra?` You have added ${day.extra} so far.`:''}</p><div class="row" style="justify-content:center;gap:16px"><button class="btn" data-act="extraDec" aria-label="Fewer">&minus;</button><span class="score" style="font-size:2.6rem" aria-live="polite">${xn}</span><button class="btn" data-act="extraInc" aria-label="More">+</button></div><div class="chips" style="justify-content:center;margin:12px 0">${[5,10,15,20].filter(x=>x<=left).map(x=>`<button class="chip" data-act="extraSet" data-v="${x}">${x}</button>`).join('')}</div><button class="btn primary block" data-act="startExtra">Learn ${xn} more word${xn===1?'':'s'}</button></div>`:'';
   const stone1=`<div class="stone ${rev?'done':''}">${rev?'&#10003;':'1'}</div>`;
   const stone2=`<div class="stone ${!rev?'lock':(day.tests.length?'done':'')}">${!rev?'&#128274;':(day.tests.length?'&#10003;':'2')}</div>`;
   const keys=Object.keys(p.words);
@@ -484,11 +491,12 @@ function vHome(){
   <div class="bar">${av(id)}<span class="name grow">${esc(l.name)}</span><button class="btn sm" data-act="logout">Switch</button></div>
   <div class="card"><h2>${st.streak?`${st.streak}-day streak`:'Today\'s trail'}</h2><p class="muted small" style="margin-bottom:16px">${finished?'You have finished the whole word list. Amazing!':`Review ${n} new word${n===1?'':'s'}, then take a quiz on everything you have met.`}</p>
   <div class="trail">
-    <div class="step">${stone1}<h2>Meet today's words</h2><p class="muted small">${rev?`All ${n} reviewed`:`${n} new word${n===1?'':'s'} waiting`}</p>
+    <div class="step">${stone1}<h2>Meet today's words</h2><p class="muted small">${rev?`All ${base} reviewed${day.extra?` (plus ${day.extra} bonus)`:''}`:`${n} new word${n===1?'':'s'} waiting`}</p>
       <div style="margin-top:10px"><button class="btn ${rev?'':'primary'}" data-act="startReview" ${n?'':'disabled'}>${rev?'Look at them again':'Start review'}</button></div></div>
     <div class="step">${stone2}<h2>Today's quiz</h2><p class="muted small">${!rev?'Unlocks when you finish the review':lastT?`Best today: ${best} of ${lastT.total}`:`${Math.min(SET(id).quizLen,keys.length)} questions on words you have reviewed`}</p>
       <div style="margin-top:10px"><button class="btn ${rev&&!day.tests.length?'primary':''}" data-act="startQuiz" ${rev?'':'disabled'}>${day.tests.length?'Try another quiz':'Start quiz'}</button></div></div>
   </div></div>
+  ${extraCard}
   <div class="card"><div class="row between"><h2>My garden</h2><span class="muted small">${st.learned} word${st.learned===1?'':'s'}</span></div>
     ${keys.length?`<div class="dots" style="margin:12px 0">${dots}</div><div class="legend"><span><i style="background:var(--seed)"></i>just met</span><span><i style="background:#BFE3D1"></i>growing</span><span><i style="background:#6FC29D"></i>strong</span><span><i style="background:var(--sun)"></i>almost mine</span><span><i style="background:#E67FA0"></i>mine</span><span><i style="box-shadow:0 0 0 2px var(--berry)"></i>tricky</span></div>`:`<p class="muted" style="margin-top:8px">Words you review will start growing here.</p>`}
     ${S.peek&&WI.has(S.peek)?`<div class="card flat" style="margin-top:14px">${cardBack(WI.get(S.peek))}<div style="margin-top:10px"><button class="btn sm" data-act="peek" data-k="">Close</button></div></div>`:''}
@@ -503,21 +511,24 @@ function vReview(){
   const front=`<button class="speak" data-act="speak" data-k="${esc(k)}" aria-label="Hear the word">&#9835;</button><div class="word">${esc(w.w)}</div><p class="hint">Tap the card to see the meaning</p>`;
   const back=cardBack(i)+`<button class="speak" data-act="speak" data-k="${esc(k)}" aria-label="Hear the word">&#9835;</button>`;
   return`<div class="shell stack" ${accent(id)}>
-  <div class="row between"><button class="btn sm" data-act="home">Close</button><span class="muted">${r.mode==='new'?'New words':'Practice'} &middot; ${r.queue.length} to go</span></div>
+  <div class="row between"><button class="btn sm" data-act="home">Close</button><span class="muted">${r.mode==='practice'?'Practice':'New words'} &middot; ${r.queue.length} to go</span></div>
   <div class="prog" aria-hidden="true"><i style="width:${pct}%"></i></div>
   <div class="card flash ${r.flipped?'back':''} ${S.anim?'flipin':''}" data-act="flip" tabindex="0" role="button" aria-label="Flashcard. Tap to flip">${r.flipped?back:front}</div>
   ${r.flipped?`<div class="row"><button class="btn grow" data-act="again">Show me again</button><button class="btn primary grow" data-act="got">Got it</button></div>`:`<button class="btn block" data-act="flip">Show meaning</button>`}
   </div>`;
 }
 function vReviewDone(){
-  const id=S.who,day=ensureToday(id);
-  return`<div class="shell stack center" ${accent(id)}><div class="hero">${av(id,1)}<h1 style="margin-top:12px">Review complete</h1><p class="muted" style="margin-top:6px">${day.ids.length} word${day.ids.length===1?'':'s'} added to your garden. Your quiz is unlocked.</p></div>
+  const id=S.who,x=S.doneExtra;
+  return`<div class="shell stack center" ${accent(id)}><div class="hero">${av(id,1)}<h1 style="margin-top:12px">${x?'Bonus words added':'Review complete'}</h1><p class="muted" style="margin-top:6px">${S.doneN} word${S.doneN===1?'':'s'} added to your garden. ${x?'Take the quiz to lock them in.':'Your quiz is unlocked.'}</p></div>
   <button class="btn primary block" data-act="startQuiz">Take the quiz now</button><button class="btn block" data-act="home">Back to my trail</button></div>`;
 }
 function finishReview(){
-  const id=S.review.id,p=P(id),t=todayStr(),day=ensureToday(id);
-  day.ids.forEach(k=>{if(!p.words[k])p.words[k]={box:S.review.rate[k]==='got'?1:0,ok:0,bad:0,first:t,due:t,tricky:false}});
-  day.reviewDone=true;day.reviewedAt=Date.now();touch(id);save();
+  const R=S.review,id=R.id,p=P(id),t=todayStr(),day=ensureToday(id),extra=R.mode==='extra';
+  R.all.forEach(k=>{if(!p.words[k])p.words[k]={box:R.rate[k]==='got'?1:0,ok:0,bad:0,first:t,due:t,tricky:false}});
+  if(extra){R.all.forEach(k=>{if(!day.ids.includes(k))day.ids.push(k)});day.extra=(day.extra||0)+R.all.length}
+  else{day.reviewDone=true;day.reviewedAt=Date.now()}
+  S.doneN=R.all.length;S.doneExtra=extra;
+  touch(id);save();
   S.review=null;go('reviewDone');
 }
 
@@ -608,7 +619,7 @@ function vShare(){
 
 /* ================= parent ================= */
 function ago(ts){if(!ts)return'never';const d=diffDays(fmt(new Date(ts)),todayStr());return d===0?'today':d===1?'yesterday':d+' days ago'}
-function dayStatus(id){const d=P(id).days[todayStr()];if(!d)return'<span class="pill no">not started</span>';return`${d.reviewDone?'<span class="pill ok">reviewed</span>':'<span class="pill no">review pending</span>'} ${d.tests.length?`<span class="pill ok">quiz ${d.tests.slice(-1)[0].score}/${d.tests.slice(-1)[0].total}</span>`:'<span class="pill no">no quiz yet</span>'}`}
+function dayStatus(id){const d=P(id).days[todayStr()];if(!d)return'<span class="pill no">not started</span>';return`${d.extra?`<span class="pill ok">+${d.extra} bonus</span> `:''}${d.reviewDone?'<span class="pill ok">reviewed</span>':'<span class="pill no">review pending</span>'} ${d.tests.length?`<span class="pill ok">quiz ${d.tests.slice(-1)[0].score}/${d.tests.slice(-1)[0].total}</span>`:'<span class="pill no">no quiz yet</span>'}`}
 function vParent(){
   const cards=LEARNERS.map(l=>{const st=stats(l.id),s=SET(l.id);
     return`<div class="card" style="--accent:${l.color}"><div class="row">${av(l.id)}<h2 class="grow">${esc(l.name)}</h2><button class="btn sm primary" data-act="openL" data-id="${l.id}">Details</button></div>
@@ -655,6 +666,7 @@ function vPLearner(){
   <div class="card"><h2>Recent quizzes</h2>${tests?`<table class="tbl"><thead><tr><th>Date</th><th>Score</th><th>Percent</th></tr></thead><tbody>${tests}</tbody></table>`:'<p class="muted">No quizzes yet.</p>'}</div>
   <div class="card"><h2>Settings for ${esc(l.name)}</h2>
     <label class="f" for="s_perDay">New words per day</label><input class="t" id="s_perDay" type="number" min="1" max="60" value="${s.perDay}" data-set="perDay">
+    <label class="f" for="s_extraMax">Most bonus words a day (0 turns it off)</label><input class="t" id="s_extraMax" type="number" min="0" max="60" value="${extraMax(id)}" data-set="extraMax">
     <label class="f" for="s_quizLen">Questions in each quiz</label><input class="t" id="s_quizLen" type="number" min="5" max="60" value="${s.quizLen}" data-set="quizLen">
     <label class="f" for="s_order">Word order</label><select class="t" id="s_order" data-set="order">${opt('hard','Hardest first (Upper, then Middle, then Foundation)',s.order)}${opt('easy','Easiest first (Foundation, Middle, Upper)',s.order)}${opt('mixed','Mixed',s.order)}</select>
     <label class="f"><input type="checkbox" id="s_mature" data-set="mature" ${s.mature?'checked':''}> Include a few words with mature meanings</label>
@@ -681,7 +693,7 @@ async function verifyPin(){
 }
 function startPractice(id,keys){
   if(!keys.length){toast('Nothing to practice right now.');return}
-  S.review={mode:'practice',id,queue:keys.slice(),total:keys.length,flipped:false,rate:{},retries:{}};
+  S.review={mode:'practice',id,queue:keys.slice(),all:keys.slice(),total:keys.length,flipped:false,rate:{},retries:{}};
   go('review');
 }
 async function copyText(t){
@@ -714,15 +726,25 @@ document.addEventListener('click',async e=>{
     case'startReview':{
       const id=S.who,day=ensureToday(id);
       if(!day.ids.length){toast('No new words today.');break}
-      S.review={mode:day.reviewDone?'practice':'new',id,queue:day.ids.slice(),total:day.ids.length,flipped:false,rate:{},retries:{}};
+      S.review={mode:day.reviewDone?'practice':'new',id,queue:day.ids.slice(),all:day.ids.slice(),total:day.ids.length,flipped:false,rate:{},retries:{}};
       go('review');break}
     case'flip':if(S.review&&!S.review.flipped){S.review.flipped=true;S.anim=true;render()}break;
     case'got':{
       const r=S.review,k=r.queue.shift();r.rate[k]=r.retries[k]?'again':'got';r.flipped=false;
-      if(!r.queue.length){if(r.mode==='new')finishReview();else{S.review=null;toast('Nice work');go('home')}}
+      if(!r.queue.length){if(r.mode==='new'||r.mode==='extra')finishReview();else{S.review=null;toast('Nice work');go('home')}}
       else render();break}
     case'again':{
       const r=S.review,k=r.queue[0];r.retries[k]=(r.retries[k]||0)+1;r.queue.push(r.queue.shift());r.flipped=false;render();break}
+    case'extraInc':{const l=extraLeft(S.who);S.extraN=Math.min(l,(S.extraN||5)+1);render();break}
+    case'extraDec':S.extraN=Math.max(1,(S.extraN||5)-1);render();break
+    case'extraSet':S.extraN=+d.v;render();break
+    case'startExtra':{
+      const id=S.who,day=ensureToday(id);
+      if(!day.reviewDone){toast('Finish today\'s review first.');break}
+      const left=extraLeft(id);if(left<=0){toast('That is plenty for today!');break}
+      const keys=takeNew(id,Math.max(1,Math.min(S.extraN||5,left)));
+      if(!keys.length){toast('No more new words left.');break}
+      S.review={mode:'extra',id,queue:keys.slice(),all:keys.slice(),total:keys.length,flipped:false,rate:{},retries:{}};go('review');break}
     case'speak':speak(WORDS[WI.get(d.k)].w);break;
     /* practice */
     case'practiceTricky':{
@@ -795,6 +817,7 @@ document.addEventListener('change',e=>{
     if(f==='perDay')s.perDay=Math.max(1,Math.min(60,parseInt(t.value,10)||s.perDay));
     else if(f==='quizLen')s.quizLen=Math.max(5,Math.min(60,parseInt(t.value,10)||s.quizLen));
     else if(f==='order')s.order=t.value;
+    else if(f==='extraMax'){const v=parseInt(t.value,10);s.extraMax=isNaN(v)?0:Math.max(0,Math.min(60,v))}
     else if(f==='mature')s.mature=t.checked;
     save();toast('Saved');render();
   }

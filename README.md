@@ -2,7 +2,7 @@
 
 A daily vocabulary trail for ISEE prep. Each child reviews a small set of new words as flashcards
 (meaning, similar word, sample sentence, prefix/root/suffix clues), then a quiz unlocks that only uses words
-already reviewed. Missed words come back more often. Parents can follow progress.
+already reviewed. Missed words come back more often. Children can add bonus words each day (they choose how many, up to a limit the parent sets). Parents can follow progress.
 
 Quiz questions follow the three ISEE verbal formats:
 - Synonyms: one word, four single-word choices
