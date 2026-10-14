@@ -155,8 +155,8 @@ hr.d{border:0;border-top:2px dashed var(--line);margin:14px 0}
 /* ================= basics ================= */
 const KEY='wordtrail.v1';
 const LEARNERS=[
-  {id:'samaira',name:'Samaira',color:'#2E8F6B',def:{perDay:25,quizLen:25,order:'hard',extraMax:25}},
-  {id:'arjun',name:'Arjun',color:'#4A7AE4',def:{perDay:5,quizLen:10,order:'easy',extraMax:10}}
+  {id:'samaira',name:'Samaira',color:'#2E8F6B',def:{perDay:25,quizLen:25,order:'hard',extraMax:25,redeemMode:'keep'}},
+  {id:'arjun',name:'Arjun',color:'#4A7AE4',def:{perDay:5,quizLen:10,order:'easy',extraMax:10,redeemMode:'keep'}}
 ];
 const LV={U:'Upper',M:'Middle',F:'Foundation'};
 const INTERVALS=[1,2,4,8,16];
@@ -299,6 +299,10 @@ function award(id,n,why){
   if(t.log.length>80)t.log.splice(0,t.log.length-80);
   touch(id);return n;
 }
+function redeemMode(id){return SET(id).redeemMode||'keep'}
+function sortedPrizes(id){return PRIZES(id).map((x,i)=>Object.assign({i},x)).sort((a,b)=>a.cost-b.cost)}
+function activePrize(id){const bal=balance(id);const a=sortedPrizes(id).filter(x=>x.cost<=bal);return a.length?a[a.length-1]:null}
+function nextPrize(id){const bal=balance(id);return sortedPrizes(id).find(x=>x.cost>bal)||null}
 function rankOf(id){
   const e=PT(id).earned;let i=0;RANKS.forEach((r,j)=>{if(e>=r[0])i=j});
   return{name:RANKS[i][1],next:RANKS[i+1]||null,at:RANKS[i][0],earned:e};
@@ -481,28 +485,41 @@ function cardBack(i){const w=WORDS[i];return`<h2 class="word" style="font-family
 
 /* ================= rewards screens ================= */
 function rewardsCard(id){
-  const bal=balance(id),pr=PRIZES(id).slice().sort((a,b)=>a.cost-b.cost),nx=pr.find(x=>x.cost>bal),rk=rankOf(id);
+  const bal=balance(id),act=activePrize(id),nx=nextPrize(id),rk=rankOf(id),reset=redeemMode(id)==='reset';
+  let body;
+  if(act)body=`<p class="small">Active reward: <b>${esc(act.name)}</b></p><p class="small muted">You have enough points. ${reset?'Redeeming resets your bank to 0.':'Redeeming keeps your leftover points.'}</p>${nx?`<p class="small muted" style="margin-top:4px">Or keep earning for <b>${esc(nx.name)}</b> at ${nx.cost} points.</p>`:''}`;
+  else if(nx)body=`<p class="small">Working toward: <b>${esc(nx.name)}</b> at ${nx.cost} points</p><div class="prog" style="margin:6px 0" aria-hidden="true"><i style="width:${Math.min(100,Math.round(100*bal/nx.cost))}%"></i></div><p class="small muted">${nx.cost-bal} to go</p>`;
+  else body=`<p class="small muted">You earn a point for every word you learn.</p>`;
   return`<div class="card"><div class="row between"><h2>Rewards</h2><span class="chip"><b>${bal}</b> points</span></div>
-  <p class="muted small" style="margin:4px 0 8px">Rank: <b>${esc(rk.name)}</b></p>
-  ${nx?`<p class="small">Next prize: <b>${esc(nx.name)}</b> at ${nx.cost} points</p><div class="prog" style="margin:6px 0" aria-hidden="true"><i style="width:${Math.min(100,Math.round(100*bal/nx.cost))}%"></i></div><p class="small muted">${nx.cost-bal} to go</p>`:pr.length?`<p class="small">You have enough for every prize. Time to claim one!</p>`:`<p class="small muted">You earn a point for every word you learn.</p>`}
-  <div style="margin-top:10px"><button class="btn" data-act="goRewards">See my rewards</button></div></div>`;
+  <p class="muted small" style="margin:4px 0 8px">Rank: <b>${esc(rk.name)}</b></p>${body}
+  <div style="margin-top:10px"><button class="btn ${act?'primary':''}" data-act="goRewards">${act?'Redeem or see rewards':'See my rewards'}</button></div></div>`;
 }
 function vRewards(){
-  const id=S.who,l=learner(id),t=PT(id),bal=balance(id),rk=rankOf(id),pc=PTS(id);
-  const pr=PRIZES(id).map((x,i)=>Object.assign({i},x)).sort((a,b)=>a.cost-b.cost);
-  const prizes=pr.map(x=>{const ok=bal>=x.cost;return`<div class="miss"><div class="row between"><b class="ui">${esc(x.name)}</b><span class="muted small">${x.cost} points</span></div>
-    <div class="prog" style="margin:8px 0" aria-hidden="true"><i style="width:${Math.min(100,Math.round(100*bal/x.cost))}%"></i></div>
-    ${ok?`<button class="btn sm primary" data-act="claim" data-i="${x.i}">Claim this prize</button>`:`<span class="small muted">${x.cost-bal} more points</span>`}</div>`}).join('');
-  const hist=t.log.slice(-8).reverse().map(e=>`<tr><td>${esc(e.d)}</td><td>${esc(e.why)}</td><td><b>${e.n>0?'+':''}${e.n}</b></td></tr>`).join('');
+  const id=S.who,l=learner(id),t=PT(id),bal=balance(id),rk=rankOf(id),pc=PTS(id),reset=redeemMode(id)==='reset';
+  const list=sortedPrizes(id),act=activePrize(id),nx=nextPrize(id);
   const rpct=rk.next?Math.round(100*(rk.earned-rk.at)/(rk.next[0]-rk.at)):100;
-  const ticket=S.claimed?`<div class="card" style="background:#FFFBEA;border-style:dashed"><h2>Prize claimed!</h2><p style="margin-top:4px"><b>${esc(S.claimed.name)}</b></p><p class="small muted">Show this to your parent. ${esc(new Date(S.claimed.t).toLocaleDateString())}</p></div>`:'';
+  const ticket=S.claimed?`<div class="card" style="background:#FFFBEA;border-style:dashed"><h2>Prize redeemed!</h2><p style="margin-top:4px"><b>${esc(S.claimed.name)}</b></p><p class="small muted">Show this to your parent. ${esc(new Date(S.claimed.t).toLocaleDateString())}</p><p class="small" style="margin-top:6px">${S.claimed.reset?'Your bank has been reset to 0. Start earning again!':`You kept ${S.claimed.left} point${S.claimed.left===1?'':'s'}.`}</p></div>`:'';
+  const hero=act?`<div class="card" style="border-color:var(--accent)"><p class="muted">Your active reward</p><h2 style="font-size:1.7rem;margin:4px 0">${esc(act.name)}</h2><p class="small muted">Costs ${act.cost} points. You have <b>${bal}</b>.</p>
+      <p class="small" style="margin:10px 0">${reset?`Redeeming cashes in your whole bank, so your points go back to <b>0</b>.${nx?` Waiting a little longer could unlock <b>${esc(nx.name)}</b> at ${nx.cost} points.`:''}`:`Redeeming takes ${act.cost} points and you keep the other ${bal-act.cost}.`}</p>
+      <button class="btn primary block" data-act="claim" data-i="${act.i}">Redeem ${esc(act.name)}</button></div>`
+    :`<div class="card"><p class="muted">Your next reward</p>${nx?`<h2 style="font-size:1.5rem;margin:4px 0">${esc(nx.name)}</h2><div class="prog" style="margin:10px 0" aria-hidden="true"><i style="width:${Math.min(100,Math.round(100*bal/nx.cost))}%"></i></div><p class="small muted">${nx.cost-bal} more points to unlock it.</p>`:`<p class="muted" style="margin-top:4px">Your parent has not added prizes yet.</p>`}</div>`;
+  const prizes=list.map(x=>{
+    const unlocked=bal>=x.cost,isAct=act&&act.i===x.i;
+    let tail;
+    if(isAct)tail=`<span class="pill ok">Active</span>`;
+    else if(unlocked&&!reset)tail=`<button class="btn sm" data-act="claim" data-i="${x.i}">Redeem</button>`;
+    else if(unlocked)tail=`<span class="pill">Unlocked</span>`;
+    else tail=`<span class="small muted">${x.cost-bal} more</span>`;
+    return`<div class="miss"><div class="row between"><b class="ui">${esc(x.name)}</b><span class="muted small">${x.cost} points</span></div>${unlocked?'':`<div class="prog" style="margin:8px 0" aria-hidden="true"><i style="width:${Math.min(100,Math.round(100*bal/x.cost))}%"></i></div>`}<div style="margin-top:6px">${tail}</div></div>`}).join('');
+  const hist=t.log.slice(-8).reverse().map(e=>`<tr><td>${esc(e.d)}</td><td>${esc(e.why)}</td><td><b>${e.n>0?'+':''}${e.n}</b></td></tr>`).join('');
   return`<div class="shell stack" ${accent(id)}><div class="row between"><button class="btn sm" data-act="home">Back</button><span class="muted">${esc(l.name)}'s rewards</span></div>
   ${ticket}
-  <div class="card center"><p class="muted">Points to spend</p><div class="score">${bal}</div>
+  <div class="card center"><p class="muted">Points in your bank</p><div class="score">${bal}</div>
     <p style="margin-top:10px">Rank: <b class="ui">${esc(rk.name)}</b></p>
     <div class="prog" style="margin:8px auto;max-width:280px" aria-hidden="true"><i style="width:${rpct}%"></i></div>
     <p class="small muted">${rk.next?`${rk.next[0]-rk.earned} more points earned to reach ${esc(rk.next[1])}`:'Top rank reached!'}</p></div>
-  <div class="card"><h2>Prize shelf</h2><p class="small muted" style="margin-bottom:6px">Claiming a prize spends its points.</p>${prizes||'<p class="muted">Your parent has not added prizes yet.</p>'}</div>
+  ${hero}
+  <div class="card"><h2>All rewards</h2><p class="small muted" style="margin-bottom:6px">${reset?'The active reward is the biggest one your points can buy. Redeeming resets your bank to 0.':'Redeeming takes the prize cost out of your bank.'}</p>${prizes||'<p class="muted">No prizes yet.</p>'}</div>
   <div class="card"><h2>How to earn points</h2><p class="small" style="margin-top:4px">${pc.perWord} point for every new word you learn, ${pc.perCorrect} for every right quiz answer, and ${pc.dayBonus} for finishing the day's review and quiz.</p></div>
   <div class="card flat"><h2>Recent points</h2>${hist?`<table class="tbl"><tbody>${hist}</tbody></table>`:'<p class="muted">No points yet.</p>'}</div></div>`;
 }
@@ -736,12 +753,14 @@ function vPLearner(){
     <label class="f" for="s_pc">Points for each right quiz answer</label><input class="t" id="s_pc" type="number" min="0" max="20" value="${PTS(id).perCorrect}" data-set="pts.perCorrect">
     <label class="f" for="s_pd">Bonus for finishing the day's review and quiz</label><input class="t" id="s_pd" type="number" min="0" max="50" value="${PTS(id).dayBonus}" data-set="pts.dayBonus">
     <p class="small muted" style="margin-top:6px">Quiz points are capped at two quizzes' worth a day so repeat quizzes cannot be farmed.</p>
+    <label class="f" for="s_rm" style="margin-top:14px">When a prize is redeemed</label>
+    <select class="t" id="s_rm" data-set="redeemMode"><option value="reset" ${redeemMode(id)==='reset'?'selected':''}>Reset the bank to zero</option><option value="keep" ${redeemMode(id)==='keep'?'selected':''}>Take only the prize cost and keep the rest</option></select>
     <label class="f" style="margin-top:14px">Prizes (cost in points)</label>
     ${PRIZES(id).map((x,i)=>`<div class="row between kv"><span>${esc(x.name)} <span class="muted small">(${x.cost})</span></span><button class="link danger" data-act="delPrize" data-i="${i}">Remove</button></div>`).join('')||'<p class="small muted">No prizes yet.</p>'}
     <div class="row wrap" style="margin-top:10px"><input class="t grow" id="pz_name" placeholder="Prize name" maxlength="40" aria-label="Prize name"><input class="t" id="pz_cost" type="number" min="1" max="5000" placeholder="Points" style="width:100px" aria-label="Prize cost"><button class="btn" data-act="addPrize">Add</button></div>
     <label class="f" style="margin-top:14px" for="adj">Adjust points (use a minus sign to take points away)</label>
     <div class="row"><input class="t" id="adj" type="number" min="-5000" max="5000" placeholder="e.g. 10 or -50" aria-label="Adjust points"><button class="btn" data-act="adjPts">Apply</button></div>
-    ${PT(id).redeemed.length?`<p class="small muted" style="margin-top:10px">Prizes claimed: ${PT(id).redeemed.slice(-6).reverse().map(r=>esc(r.name)+' ('+esc(new Date(r.t).toLocaleDateString())+')').join(', ')}</p>`:''}
+    ${PT(id).redeemed.length?`<p class="small muted" style="margin-top:10px">Prizes redeemed: ${PT(id).redeemed.slice(-6).reverse().map(r=>esc(r.name)+' ('+esc(new Date(r.t).toLocaleDateString())+')').join(', ')}</p>`:''}
     <p class="small muted" style="margin-top:8px">Changes apply from the next new set of words. Words already learned stay learned.</p>
     <hr class="d"><label class="f" for="np_${id}">Set a new PIN for ${esc(l.name)}</label><div class="row"><input class="t" id="np_${id}" type="password" inputmode="numeric" maxlength="4" placeholder="4 digits"><button class="btn" data-act="setpin" data-who="${id}">Save PIN</button></div>
     <hr class="d"><button class="link danger" data-act="resetL" data-id="${id}">Reset ${esc(l.name)}'s progress</button></div></div>`;
@@ -820,10 +839,16 @@ document.addEventListener('click',async e=>{
     case'goRewards':S.claimed=null;go('rewards');break
     case'claim':{
       const id=S.who,pr=PRIZES(id)[+d.i];if(!pr)break;
-      if(balance(id)<pr.cost){toast('Not enough points yet.');break}
-      if(!confirm('Spend '+pr.cost+' points on "'+pr.name+'"?'))break;
-      const t=PT(id);t.spent+=pr.cost;t.redeemed.push({name:pr.name,cost:pr.cost,t:Date.now()});touch(id);save();
-      S.claimed={name:pr.name,cost:pr.cost,t:Date.now()};render();window.scrollTo(0,0);break}
+      const bal=balance(id),reset=redeemMode(id)==='reset';
+      if(bal<pr.cost){toast('Not enough points yet.');break}
+      const spend=reset?bal:pr.cost;
+      const msg=reset?'Redeem "'+pr.name+'"? Your bank of '+bal+' points will reset to 0.':'Redeem "'+pr.name+'" for '+pr.cost+' points? You will keep '+(bal-pr.cost)+'.';
+      if(!confirm(msg))break;
+      const t=PT(id);t.spent+=spend;
+      t.redeemed.push({name:pr.name,cost:pr.cost,t:Date.now(),banked:bal,spent:spend});
+      t.log.push({d:todayStr(),n:-spend,why:'Redeemed: '+pr.name});
+      touch(id);save();
+      S.claimed={name:pr.name,cost:pr.cost,t:Date.now(),reset,left:bal-spend};render();window.scrollTo(0,0);break}
     case'addPrize':{
       const n=$('#pz_name').value.trim(),c=parseInt($('#pz_cost').value,10);
       if(!n||isNaN(c)||c<1){toast('Enter a prize name and a cost in points');break}
@@ -909,6 +934,7 @@ document.addEventListener('change',e=>{
     if(f==='perDay')s.perDay=Math.max(1,Math.min(60,parseInt(t.value,10)||s.perDay));
     else if(f==='quizLen')s.quizLen=Math.max(5,Math.min(60,parseInt(t.value,10)||s.quizLen));
     else if(f.indexOf('pts.')===0){const k=f.slice(4),v=parseInt(t.value,10);s.pts=Object.assign({},DEF_PTS,s.pts||{});s[ 'pts' ][k]=isNaN(v)?DEF_PTS[k]:Math.max(0,Math.min(k==='dayBonus'?50:20,v))}
+    else if(f==='redeemMode')s.redeemMode=t.value;
     else if(f==='order')s.order=t.value;
     else if(f==='extraMax'){const v=parseInt(t.value,10);s.extraMax=isNaN(v)?0:Math.max(0,Math.min(60,v))}
     else if(f==='mature')s.mature=t.checked;
