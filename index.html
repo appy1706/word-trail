@@ -141,6 +141,7 @@ table.tbl th{font-family:var(--ui);font-weight:500;color:var(--ink2)}
 .pill.ok{background:#D4F0E2}.pill.no{background:#FDE7C0}
 .svgwrap svg{width:100%;height:auto;display:block}
 .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:.6rem 1rem;border-radius:12px;font-family:var(--ui);z-index:9;max-width:90vw}
+button.chip{cursor:pointer;color:var(--ink)}
 hr.d{border:0;border-top:2px dashed var(--line);margin:14px 0}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -275,6 +276,33 @@ function streak(id){
 }
 function playable(id){return SET(id).mature?N:N-WORDS.filter(w=>w.f).length}
 const stage=wp=>wp?Math.min(4,wp.box):0;
+
+
+/* ================= rewards ================= */
+const RANKS=[[0,'Seed'],[25,'Sprout'],[75,'Sapling'],[150,'Young tree'],[300,'Blooming tree'],[500,'Orchard keeper'],[800,'Grove guardian'],[1200,'Word forest']];
+const DEF_PTS={perWord:1,perCorrect:1,dayBonus:3};
+const DEF_PRIZES={
+  samaira:[{name:'Choose the family movie',cost:50},{name:'Ice cream trip',cost:100},{name:'A new book',cost:200}],
+  arjun:[{name:'Choose the bedtime story',cost:25},{name:'Ice cream trip',cost:60},{name:'A small toy',cost:120}]
+};
+function PTS(id){return Object.assign({},DEF_PTS,SET(id).pts||{})}
+function PRIZES(id){return(data.prizes&&data.prizes[id])||(DEF_PRIZES[id]||[]).map(x=>Object.assign({},x))}
+function PT(id){
+  const p=P(id);
+  if(!p.pts){const n=Object.keys(p.words).length*PTS(id).perWord;p.pts={earned:n,spent:0,adj:0,log:n?[{d:todayStr(),n,why:'Words you already learned'}]:[],redeemed:[]}}
+  return p.pts;
+}
+function balance(id){const t=PT(id);return t.earned+t.adj-t.spent}
+function award(id,n,why){
+  if(n<=0)return 0;
+  const t=PT(id);t.earned+=n;t.log.push({d:todayStr(),n,why});
+  if(t.log.length>80)t.log.splice(0,t.log.length-80);
+  touch(id);return n;
+}
+function rankOf(id){
+  const e=PT(id).earned;let i=0;RANKS.forEach((r,j)=>{if(e>=r[0])i=j});
+  return{name:RANKS[i][1],next:RANKS[i+1]||null,at:RANKS[i][0],earned:e};
+}
 
 /* ================= stats ================= */
 function stats(id){
@@ -425,12 +453,12 @@ function recordAnswer(id,q,opt){
 }
 
 /* ================= ui state ================= */
-const S={extraN:5,doneN:0,doneExtra:false,screen:'login',who:null,role:null,pinBuf:'',pinErr:'',pinTarget:null,review:null,quiz:null,result:null,wq:'',wf:'all',peek:null,share:null,pl:null,anim:false,shake:false,msg:''};
+const S={claimed:null,donePts:0,extraN:5,doneN:0,doneExtra:false,screen:'login',who:null,role:null,pinBuf:'',pinErr:'',pinTarget:null,review:null,quiz:null,result:null,wq:'',wf:'all',peek:null,share:null,pl:null,anim:false,shake:false,msg:''};
 function go(screen){S.screen=screen;S.anim=false;render();window.scrollTo(0,0)}
 function render(){
   const app=$('#app');
   if(!data){app.innerHTML=vSetup();return}
-  const fn={login:vLogin,pin:vPin,home:vHome,review:vReview,reviewDone:vReviewDone,quiz:vQuiz,result:vResult,words:vWords,share:vShare,parent:vParent,plearner:vPLearner,ptransfer:vPTransfer}[S.screen]||vLogin;
+  const fn={login:vLogin,pin:vPin,home:vHome,review:vReview,reviewDone:vReviewDone,quiz:vQuiz,result:vResult,words:vWords,share:vShare,parent:vParent,plearner:vPLearner,ptransfer:vPTransfer,rewards:vRewards}[S.screen]||vLogin;
   app.innerHTML=fn();
   S.anim=false;S.shake=false;
 }
@@ -449,6 +477,35 @@ function partsHtml(i){
 }
 function hiSent(i){const w=WORDS[i];return esc(w.s).replace(new RegExp('\\b'+escRe(esc(w.w))+'\\b','i'),m=>'<mark>'+m+'</mark>')}
 function cardBack(i){const w=WORDS[i];return`<h2 class="word" style="font-family:var(--ui)">${esc(w.w)}</h2><p class="meaning">${esc(cap(w.m))}</p>${w.y?`<p class="small muted" style="margin-top:6px">Similar word: <b>${esc(w.y)}</b></p>`:''}<p class="sent">${hiSent(i)}</p>${partsHtml(i)}`}
+
+
+/* ================= rewards screens ================= */
+function rewardsCard(id){
+  const bal=balance(id),pr=PRIZES(id).slice().sort((a,b)=>a.cost-b.cost),nx=pr.find(x=>x.cost>bal),rk=rankOf(id);
+  return`<div class="card"><div class="row between"><h2>Rewards</h2><span class="chip"><b>${bal}</b> points</span></div>
+  <p class="muted small" style="margin:4px 0 8px">Rank: <b>${esc(rk.name)}</b></p>
+  ${nx?`<p class="small">Next prize: <b>${esc(nx.name)}</b> at ${nx.cost} points</p><div class="prog" style="margin:6px 0" aria-hidden="true"><i style="width:${Math.min(100,Math.round(100*bal/nx.cost))}%"></i></div><p class="small muted">${nx.cost-bal} to go</p>`:pr.length?`<p class="small">You have enough for every prize. Time to claim one!</p>`:`<p class="small muted">You earn a point for every word you learn.</p>`}
+  <div style="margin-top:10px"><button class="btn" data-act="goRewards">See my rewards</button></div></div>`;
+}
+function vRewards(){
+  const id=S.who,l=learner(id),t=PT(id),bal=balance(id),rk=rankOf(id),pc=PTS(id);
+  const pr=PRIZES(id).map((x,i)=>Object.assign({i},x)).sort((a,b)=>a.cost-b.cost);
+  const prizes=pr.map(x=>{const ok=bal>=x.cost;return`<div class="miss"><div class="row between"><b class="ui">${esc(x.name)}</b><span class="muted small">${x.cost} points</span></div>
+    <div class="prog" style="margin:8px 0" aria-hidden="true"><i style="width:${Math.min(100,Math.round(100*bal/x.cost))}%"></i></div>
+    ${ok?`<button class="btn sm primary" data-act="claim" data-i="${x.i}">Claim this prize</button>`:`<span class="small muted">${x.cost-bal} more points</span>`}</div>`}).join('');
+  const hist=t.log.slice(-8).reverse().map(e=>`<tr><td>${esc(e.d)}</td><td>${esc(e.why)}</td><td><b>${e.n>0?'+':''}${e.n}</b></td></tr>`).join('');
+  const rpct=rk.next?Math.round(100*(rk.earned-rk.at)/(rk.next[0]-rk.at)):100;
+  const ticket=S.claimed?`<div class="card" style="background:#FFFBEA;border-style:dashed"><h2>Prize claimed!</h2><p style="margin-top:4px"><b>${esc(S.claimed.name)}</b></p><p class="small muted">Show this to your parent. ${esc(new Date(S.claimed.t).toLocaleDateString())}</p></div>`:'';
+  return`<div class="shell stack" ${accent(id)}><div class="row between"><button class="btn sm" data-act="home">Back</button><span class="muted">${esc(l.name)}'s rewards</span></div>
+  ${ticket}
+  <div class="card center"><p class="muted">Points to spend</p><div class="score">${bal}</div>
+    <p style="margin-top:10px">Rank: <b class="ui">${esc(rk.name)}</b></p>
+    <div class="prog" style="margin:8px auto;max-width:280px" aria-hidden="true"><i style="width:${rpct}%"></i></div>
+    <p class="small muted">${rk.next?`${rk.next[0]-rk.earned} more points earned to reach ${esc(rk.next[1])}`:'Top rank reached!'}</p></div>
+  <div class="card"><h2>Prize shelf</h2><p class="small muted" style="margin-bottom:6px">Claiming a prize spends its points.</p>${prizes||'<p class="muted">Your parent has not added prizes yet.</p>'}</div>
+  <div class="card"><h2>How to earn points</h2><p class="small" style="margin-top:4px">${pc.perWord} point for every new word you learn, ${pc.perCorrect} for every right quiz answer, and ${pc.dayBonus} for finishing the day's review and quiz.</p></div>
+  <div class="card flat"><h2>Recent points</h2>${hist?`<table class="tbl"><tbody>${hist}</tbody></table>`:'<p class="muted">No points yet.</p>'}</div></div>`;
+}
 
 /* ================= setup + login ================= */
 function vSetup(){
@@ -488,7 +545,7 @@ function vHome(){
   keys.sort((a,b)=>String(p.words[a].first).localeCompare(String(p.words[b].first)));
   const dots=keys.map(k=>{const w=p.words[k];return`<button class="dot s${stage(w)}${w.tricky?' t':''}" data-act="peek" data-k="${esc(k)}" title="${esc(k)}" aria-label="${esc(k)}"></button>`}).join('');
   return`<div class="shell stack" ${accent(id)}>
-  <div class="bar">${av(id)}<span class="name grow">${esc(l.name)}</span><button class="btn sm" data-act="logout">Switch</button></div>
+  <div class="bar">${av(id)}<span class="name grow">${esc(l.name)}</span><button class="chip" data-act="goRewards" aria-label="My rewards">&#9733; <b>${balance(id)}</b></button><button class="btn sm" data-act="logout">Switch</button></div>
   <div class="card"><h2>${st.streak?`${st.streak}-day streak`:'Today\'s trail'}</h2><p class="muted small" style="margin-bottom:16px">${finished?'You have finished the whole word list. Amazing!':`Review ${n} new word${n===1?'':'s'}, then take a quiz on everything you have met.`}</p>
   <div class="trail">
     <div class="step">${stone1}<h2>Meet today's words</h2><p class="muted small">${rev?`All ${base} reviewed${day.extra?` (plus ${day.extra} bonus)`:''}`:`${n} new word${n===1?'':'s'} waiting`}</p>
@@ -497,6 +554,7 @@ function vHome(){
       <div style="margin-top:10px"><button class="btn ${rev&&!day.tests.length?'primary':''}" data-act="startQuiz" ${rev?'':'disabled'}>${day.tests.length?'Try another quiz':'Start quiz'}</button></div></div>
   </div></div>
   ${extraCard}
+  ${rewardsCard(id)}
   <div class="card"><div class="row between"><h2>My garden</h2><span class="muted small">${st.learned} word${st.learned===1?'':'s'}</span></div>
     ${keys.length?`<div class="dots" style="margin:12px 0">${dots}</div><div class="legend"><span><i style="background:var(--seed)"></i>just met</span><span><i style="background:#BFE3D1"></i>growing</span><span><i style="background:#6FC29D"></i>strong</span><span><i style="background:var(--sun)"></i>almost mine</span><span><i style="background:#E67FA0"></i>mine</span><span><i style="box-shadow:0 0 0 2px var(--berry)"></i>tricky</span></div>`:`<p class="muted" style="margin-top:8px">Words you review will start growing here.</p>`}
     ${S.peek&&WI.has(S.peek)?`<div class="card flat" style="margin-top:14px">${cardBack(WI.get(S.peek))}<div style="margin-top:10px"><button class="btn sm" data-act="peek" data-k="">Close</button></div></div>`:''}
@@ -519,14 +577,16 @@ function vReview(){
 }
 function vReviewDone(){
   const id=S.who,x=S.doneExtra;
-  return`<div class="shell stack center" ${accent(id)}><div class="hero">${av(id,1)}<h1 style="margin-top:12px">${x?'Bonus words added':'Review complete'}</h1><p class="muted" style="margin-top:6px">${S.doneN} word${S.doneN===1?'':'s'} added to your garden. ${x?'Take the quiz to lock them in.':'Your quiz is unlocked.'}</p></div>
+  return`<div class="shell stack center" ${accent(id)}><div class="hero">${av(id,1)}<h1 style="margin-top:12px">${x?'Bonus words added':'Review complete'}</h1><p class="muted" style="margin-top:6px">${S.doneN} word${S.doneN===1?'':'s'} added to your garden. ${x?'Take the quiz to lock them in.':'Your quiz is unlocked.'}</p>${S.donePts?`<p class="ui" style="margin-top:10px;font-size:1.4rem">+${S.donePts} point${S.donePts===1?'':'s'}</p>`:''}</div>
   <button class="btn primary block" data-act="startQuiz">Take the quiz now</button><button class="btn block" data-act="home">Back to my trail</button></div>`;
 }
 function finishReview(){
   const R=S.review,id=R.id,p=P(id),t=todayStr(),day=ensureToday(id),extra=R.mode==='extra';
+  PT(id);const fresh=R.all.filter(k=>!p.words[k]).length;
   R.all.forEach(k=>{if(!p.words[k])p.words[k]={box:R.rate[k]==='got'?1:0,ok:0,bad:0,first:t,due:t,tricky:false}});
   if(extra){R.all.forEach(k=>{if(!day.ids.includes(k))day.ids.push(k)});day.extra=(day.extra||0)+R.all.length}
   else{day.reviewDone=true;day.reviewedAt=Date.now()}
+  S.donePts=award(id,fresh*PTS(id).perWord,extra?'Bonus words':'New words');
   S.doneN=R.all.length;S.doneExtra=extra;
   touch(id);save();
   S.review=null;go('reviewDone');
@@ -571,7 +631,7 @@ function vResult(){
   const R=S.result,id=R.id,pct=Math.round(100*R.score/R.total);
   const msg=pct>=90?'Outstanding. These words are really yours.':pct>=70?'Strong work. A few tricky ones to keep an eye on.':pct>=50?'Good effort. The tricky words will come back so they can stick.':'Tough round, and that is how words stick. Look over the misses below.';
   const missed=R.items.filter(x=>!x.ok);
-  return`<div class="shell stack" ${accent(id)}><div class="card center"><p class="muted">Quiz finished</p><div class="score">${R.score}<span class="muted" style="font-size:1.6rem"> / ${R.total}</span></div><p style="margin-top:8px">${esc(msg)}</p></div>
+  return`<div class="shell stack" ${accent(id)}><div class="card center"><p class="muted">Quiz finished</p><div class="score">${R.score}<span class="muted" style="font-size:1.6rem"> / ${R.total}</span></div><p style="margin-top:8px">${esc(msg)}</p>${R.pts?`<p class="ui" style="margin-top:10px;font-size:1.4rem">+${R.pts} point${R.pts===1?'':'s'}</p>`:''}</div>
   ${missed.length?`<div class="card"><h2>Words to look at again</h2><p class="small muted">They are marked tricky and will show up more often.</p><div style="margin-top:8px">${missed.map(m=>{const w=WORDS[WI.get(m.k)];return`<div class="miss"><b class="ui">${esc(w.w)}</b><br><span class="small">${esc(cap(w.m))}</span></div>`}).join('')}</div></div>`:`<div class="card center"><h2>No misses</h2><p class="muted">Every answer was right.</p></div>`}
   <div class="stack-s">${missed.length?`<button class="btn primary block" data-act="practiceMissed">Practice the missed words</button>`:''}<button class="btn block" data-act="startQuiz">Take another quiz</button><button class="btn block" data-act="home">Back to my trail</button></div></div>`;
 }
@@ -628,6 +688,7 @@ function vParent(){
     <div class="kv"><span>Strong or mastered</span><b>${st.mastered}</b></div>
     <div class="kv"><span>Quiz accuracy</span><b>${st.acc==null?'-':st.acc+'%'}</b></div>
     <div class="kv"><span>Tricky words</span><b>${st.tricky}</b></div>
+    <div class="kv"><span>Points to spend</span><b>${balance(l.id)}</b></div>
     <div class="kv"><span>Day streak</span><b>${st.streak}</b></div>
     <div class="kv"><span>Last active</span><b>${st.lastDay?esc(st.lastDay):'never'}</b></div>
     <div class="kv"><span>Plan</span><b>${s.perDay} new a day</b></div></div>`}).join('');
@@ -660,7 +721,7 @@ function vPLearner(){
   const opt=(v,t,cur)=>`<option value="${v}" ${v===cur?'selected':''}>${t}</option>`;
   return`<div class="shell wide stack" style="--accent:${l.color}"><div class="bar"><button class="btn sm" data-act="parentHome">Back</button>${av(id)}<span class="name grow">${esc(l.name)}</span></div>
   <div class="grid2"><div class="card"><h2>At a glance</h2><div style="margin:8px 0">${dayStatus(id)}</div>
-    <div class="kv"><span>Words learned</span><b>${st.learned} of ${playable(l.id)}</b></div><div class="kv"><span>Strong or mastered</span><b>${st.mastered}</b></div><div class="kv"><span>Quiz accuracy</span><b>${st.acc==null?'-':st.acc+'%'}</b></div><div class="kv"><span>Quizzes taken</span><b>${st.tests}</b></div><div class="kv"><span>Day streak</span><b>${st.streak}</b></div>${lvl}${typeRows}</div>
+    <div class="kv"><span>Words learned</span><b>${st.learned} of ${playable(l.id)}</b></div><div class="kv"><span>Strong or mastered</span><b>${st.mastered}</b></div><div class="kv"><span>Quiz accuracy</span><b>${st.acc==null?'-':st.acc+'%'}</b></div><div class="kv"><span>Quizzes taken</span><b>${st.tests}</b></div><div class="kv"><span>Points to spend</span><b>${balance(id)} (earned ${PT(id).earned})</b></div><div class="kv"><span>Day streak</span><b>${st.streak}</b></div>${lvl}${typeRows}</div>
   <div class="card"><h2>Last 14 days</h2><p class="small muted">Best quiz score each day (percent)</p><div class="svgwrap">${svgBars(score,labels,l.color,100,'%')}</div><p class="small muted" style="margin-top:6px">New words reviewed each day</p><div class="svgwrap">${svgBars(newW,labels,'#F6B93B',Math.max(5,...newW))}</div></div></div>
   <div class="card"><h2>Trickiest words</h2><p class="small muted" style="margin-bottom:6px">Words missed most, with the words they were mixed up with.</p>${tricky.length?`<table class="tbl"><thead><tr><th>Word</th><th>Record</th><th>Mixed up with</th></tr></thead><tbody>${trows}</tbody></table>`:'<p class="muted">No misses yet.</p>'}</div>
   <div class="card"><h2>Recent quizzes</h2>${tests?`<table class="tbl"><thead><tr><th>Date</th><th>Score</th><th>Percent</th></tr></thead><tbody>${tests}</tbody></table>`:'<p class="muted">No quizzes yet.</p>'}</div>
@@ -670,6 +731,17 @@ function vPLearner(){
     <label class="f" for="s_quizLen">Questions in each quiz</label><input class="t" id="s_quizLen" type="number" min="5" max="60" value="${s.quizLen}" data-set="quizLen">
     <label class="f" for="s_order">Word order</label><select class="t" id="s_order" data-set="order">${opt('hard','Hardest first (Upper, then Middle, then Foundation)',s.order)}${opt('easy','Easiest first (Foundation, Middle, Upper)',s.order)}${opt('mixed','Mixed',s.order)}</select>
     <label class="f"><input type="checkbox" id="s_mature" data-set="mature" ${s.mature?'checked':''}> Include a few words with mature meanings</label>
+    <hr class="d"><h3>Rewards</h3>
+    <label class="f" for="s_pw">Points for each new word learned</label><input class="t" id="s_pw" type="number" min="0" max="20" value="${PTS(id).perWord}" data-set="pts.perWord">
+    <label class="f" for="s_pc">Points for each right quiz answer</label><input class="t" id="s_pc" type="number" min="0" max="20" value="${PTS(id).perCorrect}" data-set="pts.perCorrect">
+    <label class="f" for="s_pd">Bonus for finishing the day's review and quiz</label><input class="t" id="s_pd" type="number" min="0" max="50" value="${PTS(id).dayBonus}" data-set="pts.dayBonus">
+    <p class="small muted" style="margin-top:6px">Quiz points are capped at two quizzes' worth a day so repeat quizzes cannot be farmed.</p>
+    <label class="f" style="margin-top:14px">Prizes (cost in points)</label>
+    ${PRIZES(id).map((x,i)=>`<div class="row between kv"><span>${esc(x.name)} <span class="muted small">(${x.cost})</span></span><button class="link danger" data-act="delPrize" data-i="${i}">Remove</button></div>`).join('')||'<p class="small muted">No prizes yet.</p>'}
+    <div class="row wrap" style="margin-top:10px"><input class="t grow" id="pz_name" placeholder="Prize name" maxlength="40" aria-label="Prize name"><input class="t" id="pz_cost" type="number" min="1" max="5000" placeholder="Points" style="width:100px" aria-label="Prize cost"><button class="btn" data-act="addPrize">Add</button></div>
+    <label class="f" style="margin-top:14px" for="adj">Adjust points (use a minus sign to take points away)</label>
+    <div class="row"><input class="t" id="adj" type="number" min="-5000" max="5000" placeholder="e.g. 10 or -50" aria-label="Adjust points"><button class="btn" data-act="adjPts">Apply</button></div>
+    ${PT(id).redeemed.length?`<p class="small muted" style="margin-top:10px">Prizes claimed: ${PT(id).redeemed.slice(-6).reverse().map(r=>esc(r.name)+' ('+esc(new Date(r.t).toLocaleDateString())+')').join(', ')}</p>`:''}
     <p class="small muted" style="margin-top:8px">Changes apply from the next new set of words. Words already learned stay learned.</p>
     <hr class="d"><label class="f" for="np_${id}">Set a new PIN for ${esc(l.name)}</label><div class="row"><input class="t" id="np_${id}" type="password" inputmode="numeric" maxlength="4" placeholder="4 digits"><button class="btn" data-act="setpin" data-who="${id}">Save PIN</button></div>
     <hr class="d"><button class="link danger" data-act="resetL" data-id="${id}">Reset ${esc(l.name)}'s progress</button></div></div>`;
@@ -745,6 +817,22 @@ document.addEventListener('click',async e=>{
       const keys=takeNew(id,Math.max(1,Math.min(S.extraN||5,left)));
       if(!keys.length){toast('No more new words left.');break}
       S.review={mode:'extra',id,queue:keys.slice(),all:keys.slice(),total:keys.length,flipped:false,rate:{},retries:{}};go('review');break}
+    case'goRewards':S.claimed=null;go('rewards');break
+    case'claim':{
+      const id=S.who,pr=PRIZES(id)[+d.i];if(!pr)break;
+      if(balance(id)<pr.cost){toast('Not enough points yet.');break}
+      if(!confirm('Spend '+pr.cost+' points on "'+pr.name+'"?'))break;
+      const t=PT(id);t.spent+=pr.cost;t.redeemed.push({name:pr.name,cost:pr.cost,t:Date.now()});touch(id);save();
+      S.claimed={name:pr.name,cost:pr.cost,t:Date.now()};render();window.scrollTo(0,0);break}
+    case'addPrize':{
+      const n=$('#pz_name').value.trim(),c=parseInt($('#pz_cost').value,10);
+      if(!n||isNaN(c)||c<1){toast('Enter a prize name and a cost in points');break}
+      data.prizes=data.prizes||{};data.prizes[S.pl]=PRIZES(S.pl).concat([{name:n,cost:Math.min(5000,c)}]);save();render();break}
+    case'delPrize':{
+      const list=PRIZES(S.pl);list.splice(+d.i,1);data.prizes=data.prizes||{};data.prizes[S.pl]=list;save();render();break}
+    case'adjPts':{
+      const v=parseInt($('#adj').value,10);if(isNaN(v)||v===0){toast('Enter a number of points');break}
+      const t=PT(S.pl);t.adj+=v;t.log.push({d:todayStr(),n:v,why:'Parent adjustment'});touch(S.pl);save();toast((v>0?'Added ':'Removed ')+Math.abs(v)+' points');render();break}
     case'speak':speak(WORDS[WI.get(d.k)].w);break;
     /* practice */
     case'practiceTricky':{
@@ -772,8 +860,12 @@ document.addEventListener('click',async e=>{
         const day=ensureToday(id);
         day.tests.push({t:Date.now(),score,total,items:Q.items.map(x=>({k:x.k,ok:x.ok,ty:x.ty}))});
         P(id).tests.push({d:t,t:Date.now(),score,total});
+        const pc=PTS(id);PT(id);let pts=0;
+        const cap=SET(id).quizLen*2*pc.perCorrect,room=Math.max(0,cap-(day.qpts||0)),give=Math.min(score*pc.perCorrect,room);
+        if(give>0){award(id,give,'Quiz answers');day.qpts=(day.qpts||0)+give;pts+=give}
+        if(!day.bonusGiven&&day.reviewDone&&pc.dayBonus>0){award(id,pc.dayBonus,'Daily trail complete');day.bonusGiven=true;pts+=pc.dayBonus}
         touch(id);save();
-        S.result={id,score,total,items:Q.items};S.quiz=null;go('result');
+        S.result={id,score,total,items:Q.items,pts};S.quiz=null;go('result');
       }else{render();window.scrollTo(0,0)}
       break}
     case'quitQuiz':if(confirm('Leave this quiz? Your answers so far are kept for learning, but the score will not be saved.')){S.quiz=null;go('home')}break;
@@ -816,6 +908,7 @@ document.addEventListener('change',e=>{
     const s=SET(S.pl),f=t.dataset.set;
     if(f==='perDay')s.perDay=Math.max(1,Math.min(60,parseInt(t.value,10)||s.perDay));
     else if(f==='quizLen')s.quizLen=Math.max(5,Math.min(60,parseInt(t.value,10)||s.quizLen));
+    else if(f.indexOf('pts.')===0){const k=f.slice(4),v=parseInt(t.value,10);s.pts=Object.assign({},DEF_PTS,s.pts||{});s[ 'pts' ][k]=isNaN(v)?DEF_PTS[k]:Math.max(0,Math.min(k==='dayBonus'?50:20,v))}
     else if(f==='order')s.order=t.value;
     else if(f==='extraMax'){const v=parseInt(t.value,10);s.extraMax=isNaN(v)?0:Math.max(0,Math.min(60,v))}
     else if(f==='mature')s.mature=t.checked;
